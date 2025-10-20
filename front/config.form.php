@@ -2,8 +2,26 @@
 /*
  -------------------------------------------------------------------------
  Entra Hierarchy plugin for GLPI
- Copyright (C) 2024 by the Entra Hierarchy Development Team.
+ Copyright (C) 2024 by Lukáš Kraič (lukas.kraic@gmail.com)
  -------------------------------------------------------------------------
+
+ LICENSE
+
+ This file is part of Entra Hierarchy.
+
+ Entra Hierarchy is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 3 of the License, or
+ (at your option) any later version.
+
+ Entra Hierarchy is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with Entra Hierarchy. If not, see <http://www.gnu.org/licenses/>.
+ --------------------------------------------------------------------------
  */
 
 include ('../../../inc/includes.php');
@@ -35,6 +53,54 @@ if ($config) {
         $lastSyncLog = $result->current();
     }
 }
+
+// Fetch available profiles for dropdown
+$profiles = [];
+$profileResult = $DB->request(['FROM' => 'glpi_profiles', 'ORDER' => 'name ASC']);
+foreach ($profileResult as $profile) {
+    $profiles[$profile['id']] = $profile['name'];
+}
+
+// Fetch available entities for dropdown
+$entities = [];
+$entityResult = $DB->request(['FROM' => 'glpi_entities', 'ORDER' => 'completename ASC']);
+foreach ($entityResult as $entity) {
+    $entities[$entity['id']] = $entity['completename'];
+}
+
+// Fetch available groups for dropdown
+$groups = [0 => __('None', 'glpientrahierarchy')];
+$groupResult = $DB->request(['FROM' => 'glpi_groups', 'ORDER' => 'completename ASC']);
+foreach ($groupResult as $group) {
+    $groups[$group['id']] = $group['completename'];
+}
+
+// Fetch available locations for dropdown
+$locations = [0 => __('None', 'glpientrahierarchy')];
+$locationResult = $DB->request(['FROM' => 'glpi_locations', 'ORDER' => 'completename ASC']);
+foreach ($locationResult as $location) {
+    $locations[$location['id']] = $location['completename'];
+}
+
+// Fetch available user categories for dropdown
+$userCategories = [0 => __('None', 'glpientrahierarchy')];
+$categoryResult = $DB->request(['FROM' => 'glpi_usercategories', 'ORDER' => 'name ASC']);
+foreach ($categoryResult as $category) {
+    $userCategories[$category['id']] = $category['name'];
+}
+
+// Available languages
+$languages = [
+    '' => __('None (use GLPI default)', 'glpientrahierarchy'),
+    'sk_SK' => 'Slovenčina (Slovak)',
+    'cs_CZ' => 'Čeština (Czech)',
+    'en_GB' => 'English (UK)',
+    'en_US' => 'English (US)',
+    'de_DE' => 'Deutsch (German)',
+    'fr_FR' => 'Français (French)',
+    'pl_PL' => 'Polski (Polish)',
+    'hu_HU' => 'Magyar (Hungarian)'
+];
 ?>
 
 <script>
@@ -314,6 +380,196 @@ function manualSync() {
 <td>
 <input type='text' name='sync_filter_company_name' size='60' value='<?php echo htmlspecialchars($config['sync_filter_company_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>'>
 <br><small><?php echo __('Comma-separated list (e.g., Acme Inc,Subsidiary Ltd) - leave empty for all', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- User Default Settings Section Header -->
+<tr class='tab_bg_2'>
+<th colspan='2'>
+<h3 style='margin: 10px 0;'><?php echo __('User Default Settings', 'glpientrahierarchy'); ?></h3>
+<small><?php echo __('Configure default values for new users created from Entra ID', 'glpientrahierarchy'); ?></small>
+<div style='background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 8px; margin-top: 8px; border-radius: 4px; color: #0c5460;'>
+<strong>ℹ️ <?php echo __('Important:', 'glpientrahierarchy'); ?></strong>
+<?php echo __('These settings are CRITICAL for new users to be able to login. Without a profile assignment, users cannot access GLPI.', 'glpientrahierarchy'); ?>
+</div>
+</th>
+</tr>
+
+<!-- Default Profile -->
+<tr class='tab_bg_1'>
+<td>
+<span style='color: #d9534f;'>*</span> <?php echo __('Default profile', 'glpientrahierarchy'); ?>
+</td>
+<td>
+<select name='default_profiles_id' required>
+<?php foreach ($profiles as $id => $name): ?>
+<option value='<?php echo $id; ?>' <?php echo ($config && $config['default_profiles_id'] == $id) ? 'selected' : ((!$config && $id == 1) ? 'selected' : ''); ?>>
+<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>
+</option>
+<?php endforeach; ?>
+</select>
+<br><small style='color: #d9534f;'><strong><?php echo __('CRITICAL:', 'glpientrahierarchy'); ?></strong> <?php echo __('Users MUST have a profile to login. Recommended: "Self-Service" for basic users.', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Default Entity -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Default entity', 'glpientrahierarchy'); ?></td>
+<td>
+<select name='default_entities_id'>
+<?php foreach ($entities as $id => $name): ?>
+<option value='<?php echo $id; ?>' <?php echo ($config && $config['default_entities_id'] == $id) ? 'selected' : ((!$config && $id == 0) ? 'selected' : ''); ?>>
+<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>
+</option>
+<?php endforeach; ?>
+</select>
+<br><small><?php echo __('Root entity by default, can be overridden by auto-mapping', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Profile is Recursive -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Recursive profile', 'glpientrahierarchy'); ?></td>
+<td>
+<?php $checked = (!$config || $config['profile_is_recursive']) ? 'checked' : ''; ?>
+<input type='checkbox' name='profile_is_recursive' <?php echo $checked; ?>>
+<small><?php echo __('Allow user to access sub-entities of their assigned entity', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Default Group -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Default group', 'glpientrahierarchy'); ?></td>
+<td>
+<select name='default_groups_id'>
+<?php foreach ($groups as $id => $name): ?>
+<option value='<?php echo $id; ?>' <?php echo ($config && $config['default_groups_id'] == $id) ? 'selected' : ((!$config && $id == 0) ? 'selected' : ''); ?>>
+<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>
+</option>
+<?php endforeach; ?>
+</select>
+<br><small><?php echo __('Optional, can be overridden by auto-mapping from department', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Default Location -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Default location', 'glpientrahierarchy'); ?></td>
+<td>
+<select name='default_locations_id'>
+<?php foreach ($locations as $id => $name): ?>
+<option value='<?php echo $id; ?>' <?php echo ($config && $config['default_locations_id'] == $id) ? 'selected' : ((!$config && $id == 0) ? 'selected' : ''); ?>>
+<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>
+</option>
+<?php endforeach; ?>
+</select>
+<br><small><?php echo __('Optional, can be overridden by auto-mapping from office location', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Default User Category -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Default user category', 'glpientrahierarchy'); ?></td>
+<td>
+<select name='default_usercategories_id'>
+<?php foreach ($userCategories as $id => $name): ?>
+<option value='<?php echo $id; ?>' <?php echo ($config && $config['default_usercategories_id'] == $id) ? 'selected' : ((!$config && $id == 0) ? 'selected' : ''); ?>>
+<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>
+</option>
+<?php endforeach; ?>
+</select>
+<br><small><?php echo __('Optional, for user classification', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Default Language -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Default language', 'glpientrahierarchy'); ?></td>
+<td>
+<select name='default_language'>
+<?php foreach ($languages as $code => $name): ?>
+<option value='<?php echo $code; ?>' <?php echo ($config && $config['default_language'] == $code) ? 'selected' : ''; ?>>
+<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>
+</option>
+<?php endforeach; ?>
+</select>
+<br><small><?php echo __('Language interface for new users', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Auto-Mapping Section Header -->
+<tr class='tab_bg_2'>
+<th colspan='2'>
+<h3 style='margin: 10px 0;'><?php echo __('Intelligent Auto-Mapping', 'glpientrahierarchy'); ?></h3>
+<small><?php echo __('Automatically map Entra ID attributes to GLPI resources', 'glpientrahierarchy'); ?></small>
+</th>
+</tr>
+
+<!-- Auto-map Department to Group -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Department → Group', 'glpientrahierarchy'); ?></td>
+<td>
+<?php $checked = ($config && $config['automap_department_to_group']) ? 'checked' : ''; ?>
+<input type='checkbox' name='automap_department_to_group' <?php echo $checked; ?>>
+<small><?php echo __('Automatically create groups from Entra department field and assign users', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Auto-map Company to Entity -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Company → Entity', 'glpientrahierarchy'); ?></td>
+<td>
+<?php $checked = ($config && $config['automap_company_to_entity']) ? 'checked' : ''; ?>
+<input type='checkbox' name='automap_company_to_entity' <?php echo $checked; ?>>
+<small><?php echo __('Automatically map Entra company name to existing GLPI entity (exact match)', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Auto-map Office to Location -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Office Location → Location', 'glpientrahierarchy'); ?></td>
+<td>
+<?php $checked = ($config && $config['automap_office_to_location']) ? 'checked' : ''; ?>
+<input type='checkbox' name='automap_office_to_location' <?php echo $checked; ?>>
+<small><?php echo __('Automatically map Entra office location to existing GLPI location (exact match)', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Scheduling Section Header -->
+<tr class='tab_bg_2'>
+<th colspan='2'>
+<h3 style='margin: 10px 0;'><?php echo __('Synchronization Scheduling', 'glpientrahierarchy'); ?></h3>
+<small><?php echo __('Configure when synchronization is allowed to run', 'glpientrahierarchy'); ?></small>
+</th>
+</tr>
+
+<!-- Sync Hour Min -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Earliest sync hour', 'glpientrahierarchy'); ?></td>
+<td>
+<select name='sync_hourmin'>
+<?php for ($h = 0; $h <= 23; $h++): ?>
+<option value='<?php echo $h; ?>' <?php echo ($config && $config['sync_hourmin'] == $h) ? 'selected' : ((!$config && $h == 0) ? 'selected' : ''); ?>>
+<?php echo sprintf('%02d:00', $h); ?>
+</option>
+<?php endfor; ?>
+</select>
+<br><small><?php echo __('Synchronization will only run during or after this hour (0-23)', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Sync Hour Max -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Latest sync hour', 'glpientrahierarchy'); ?></td>
+<td>
+<select name='sync_hourmax'>
+<?php for ($h = 1; $h <= 24; $h++): ?>
+<option value='<?php echo $h; ?>' <?php echo ($config && $config['sync_hourmax'] == $h) ? 'selected' : ((!$config && $h == 24) ? 'selected' : ''); ?>>
+<?php echo sprintf('%02d:00', $h); ?>
+</option>
+<?php endfor; ?>
+</select>
+<br><small><?php echo __('Synchronization will only run before this hour (1-24, where 24 = no restriction)', 'glpientrahierarchy'); ?></small>
 </td>
 </tr>
 

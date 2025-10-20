@@ -34,6 +34,21 @@ class EntraSync extends CommonDBTM
             return 0;
         }
 
+        // Check if current time is within sync window
+        $currentHour = (int)date('H');
+        $syncHourMin = (int)($config['sync_hourmin'] ?? 0);
+        $syncHourMax = (int)($config['sync_hourmax'] ?? 24);
+
+        if ($currentHour < $syncHourMin || $currentHour >= $syncHourMax) {
+            $task->log(sprintf(
+                __('Sync skipped: current hour %d is outside sync window (%02d:00 - %02d:00)', 'glpientrahierarchy'),
+                $currentHour,
+                $syncHourMin,
+                $syncHourMax
+            ));
+            return 0;
+        }
+
         // Initialize Graph API client
         $graphClient = new GraphApiClient(
             $config['client_id'],

@@ -2,7 +2,7 @@
 /*
  -------------------------------------------------------------------------
  Entra Hierarchy plugin for GLPI
- Copyright (C) 2024 by the Entra Hierarchy Development Team.
+ Copyright (C) 2024 by Lukáš Kraič (lukas.kraic@gmail.com)
  -------------------------------------------------------------------------
 
  LICENSE
@@ -11,7 +11,7 @@
 
  Entra Hierarchy is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
+ the Free Software Foundation; either version 3 of the License, or
  (at your option) any later version.
 
  Entra Hierarchy is distributed in the hope that it will be useful,
@@ -27,7 +27,7 @@
 use GlpiPlugin\EntraHierarchy\EntraConfig;
 use GlpiPlugin\EntraHierarchy\EntraSync;
 
-define('PLUGIN_ENTRAHIERARCHY_VERSION', '1.1.0');
+define('PLUGIN_ENTRAHIERARCHY_VERSION', '1.2.0');
 
 /**
  * Initialize the plugin
@@ -56,8 +56,8 @@ function plugin_version_glpientrahierarchy()
     return [
         'name'           => __('Entra Hierarchy Sync', 'glpientrahierarchy'),
         'version'        => PLUGIN_ENTRAHIERARCHY_VERSION,
-        'author'         => 'Entra Hierarchy Team',
-        'license'        => 'GPLv2+',
+        'author'         => 'Lukáš Kraič (lukas.kraic@gmail.com)',
+        'license'        => 'GPL-3.0+',
         'homepage'       => 'https://github.com/glpi-project/glpientrahierarchy',
         'requirements'   => [
             'glpi' => [

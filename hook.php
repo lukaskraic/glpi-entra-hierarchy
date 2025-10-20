@@ -2,7 +2,7 @@
 /*
  -------------------------------------------------------------------------
  Entra Hierarchy plugin for GLPI
- Copyright (C) 2024 by the Entra Hierarchy Development Team.
+ Copyright (C) 2024 by Lukáš Kraič (lukas.kraic@gmail.com)
  -------------------------------------------------------------------------
 
  LICENSE
@@ -11,7 +11,7 @@
 
  Entra Hierarchy is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
+ the Free Software Foundation; either version 3 of the License, or
  (at your option) any later version.
 
  Entra Hierarchy is distributed in the hope that it will be useful,
@@ -53,6 +53,18 @@ function plugin_glpientrahierarchy_install()
             `sync_filter_department` varchar(255) DEFAULT NULL,
             `sync_filter_company_name` varchar(255) DEFAULT NULL,
             `deleted_users_action` varchar(50) DEFAULT 'keep_active',
+            `default_profiles_id` int NOT NULL DEFAULT '1',
+            `default_entities_id` int NOT NULL DEFAULT '0',
+            `profile_is_recursive` tinyint NOT NULL DEFAULT '1',
+            `default_groups_id` int NOT NULL DEFAULT '0',
+            `default_locations_id` int NOT NULL DEFAULT '0',
+            `default_usercategories_id` int NOT NULL DEFAULT '0',
+            `default_language` varchar(10) DEFAULT NULL,
+            `automap_department_to_group` tinyint NOT NULL DEFAULT '0',
+            `automap_company_to_entity` tinyint NOT NULL DEFAULT '0',
+            `automap_office_to_location` tinyint NOT NULL DEFAULT '0',
+            `sync_hourmin` int NOT NULL DEFAULT '0',
+            `sync_hourmax` int NOT NULL DEFAULT '24',
             `date_creation` datetime DEFAULT NULL,
             `date_mod` datetime DEFAULT NULL,
             PRIMARY KEY (`id`)
@@ -69,7 +81,19 @@ function plugin_glpientrahierarchy_install()
             'sync_filter_require_job_title' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `sync_filter_require_job_title` tinyint NOT NULL DEFAULT '0'",
             'sync_filter_department' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `sync_filter_department` varchar(255) DEFAULT NULL",
             'sync_filter_company_name' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `sync_filter_company_name` varchar(255) DEFAULT NULL",
-            'deleted_users_action' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `deleted_users_action` varchar(50) DEFAULT 'keep_active'"
+            'deleted_users_action' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `deleted_users_action` varchar(50) DEFAULT 'keep_active'",
+            'default_profiles_id' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `default_profiles_id` int NOT NULL DEFAULT '1'",
+            'default_entities_id' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `default_entities_id` int NOT NULL DEFAULT '0'",
+            'profile_is_recursive' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `profile_is_recursive` tinyint NOT NULL DEFAULT '1'",
+            'default_groups_id' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `default_groups_id` int NOT NULL DEFAULT '0'",
+            'default_locations_id' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `default_locations_id` int NOT NULL DEFAULT '0'",
+            'default_usercategories_id' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `default_usercategories_id` int NOT NULL DEFAULT '0'",
+            'default_language' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `default_language` varchar(10) DEFAULT NULL",
+            'automap_department_to_group' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `automap_department_to_group` tinyint NOT NULL DEFAULT '0'",
+            'automap_company_to_entity' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `automap_company_to_entity` tinyint NOT NULL DEFAULT '0'",
+            'automap_office_to_location' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `automap_office_to_location` tinyint NOT NULL DEFAULT '0'",
+            'sync_hourmin' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `sync_hourmin` int NOT NULL DEFAULT '0'",
+            'sync_hourmax' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `sync_hourmax` int NOT NULL DEFAULT '24'"
         ];
 
         foreach ($fieldsToAdd as $field => $alterQuery) {

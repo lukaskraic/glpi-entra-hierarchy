@@ -58,6 +58,18 @@ class EntraConfig extends CommonDBTM
             'sync_filter_department' => $input['sync_filter_department'] ?? '',
             'sync_filter_company_name' => $input['sync_filter_company_name'] ?? '',
             'deleted_users_action' => $input['deleted_users_action'] ?? 'keep_active',
+            'default_profiles_id' => $input['default_profiles_id'] ?? 1,
+            'default_entities_id' => $input['default_entities_id'] ?? 0,
+            'profile_is_recursive' => isset($input['profile_is_recursive']) ? 1 : 0,
+            'default_groups_id' => $input['default_groups_id'] ?? 0,
+            'default_locations_id' => $input['default_locations_id'] ?? 0,
+            'default_usercategories_id' => $input['default_usercategories_id'] ?? 0,
+            'default_language' => $input['default_language'] ?? '',
+            'automap_department_to_group' => isset($input['automap_department_to_group']) ? 1 : 0,
+            'automap_company_to_entity' => isset($input['automap_company_to_entity']) ? 1 : 0,
+            'automap_office_to_location' => isset($input['automap_office_to_location']) ? 1 : 0,
+            'sync_hourmin' => $input['sync_hourmin'] ?? 0,
+            'sync_hourmax' => $input['sync_hourmax'] ?? 24,
             'date_mod' => date('Y-m-d H:i:s')
         ];
 
