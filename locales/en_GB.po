@@ -1,0 +1,126 @@
+# GLPI Entra Hierarchy Plugin - English Translation
+msgid ""
+msgstr ""
+"Project-Id-Version: GLPI Plugin - Entra Hierarchy\n"
+"POT-Creation-Date: 2024-10-13 12:00+0000\n"
+"PO-Revision-Date: 2024-10-13 12:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: English\n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Entra Hierarchy Sync"
+msgstr "Entra Hierarchy Sync"
+
+msgid "Entra Hierarchy Configuration"
+msgstr "Entra Hierarchy Configuration"
+
+msgid "Starting Entra ID hierarchy synchronization..."
+msgstr "Starting Entra ID hierarchy synchronization..."
+
+msgid "Sync is disabled or plugin is not configured"
+msgstr "Sync is disabled or plugin is not configured"
+
+msgid "Failed to connect to Microsoft Graph API"
+msgstr "Failed to connect to Microsoft Graph API"
+
+msgid "Successfully connected to Microsoft Graph API"
+msgstr "Successfully connected to Microsoft Graph API"
+
+msgid "Found %d users in Entra ID"
+msgstr "Found %d users in Entra ID"
+
+msgid "Failed to process user %s: %s"
+msgstr "Failed to process user %s: %s"
+
+msgid "Sync completed: %d synced (%d created, %d updated), %d failed in %s seconds"
+msgstr "Sync completed: %d synced (%d created, %d updated), %d failed in %s seconds"
+
+msgid "Created user: %s"
+msgstr "Created user: %s"
+
+msgid "Created by Entra Hierarchy plugin"
+msgstr "Created by Entra Hierarchy plugin"
+
+msgid "Synchronize organizational hierarchy from Microsoft Entra ID"
+msgstr "Synchronize organizational hierarchy from Microsoft Entra ID"
+
+msgid "Runs every 30 minutes by default"
+msgstr "Runs every 30 minutes by default"
+
+msgid "Microsoft Entra ID Configuration"
+msgstr "Microsoft Entra ID Configuration"
+
+msgid "Client ID"
+msgstr "Client ID"
+
+msgid "Client Secret"
+msgstr "Client Secret"
+
+msgid "Tenant ID"
+msgstr "Tenant ID"
+
+msgid "Enable automatic synchronization"
+msgstr "Enable automatic synchronization"
+
+msgid "Synchronization interval (seconds)"
+msgstr "Synchronization interval (seconds)"
+
+msgid "Minimum: 300 seconds (5 minutes)"
+msgstr "Minimum: 300 seconds (5 minutes)"
+
+msgid "Last synchronization"
+msgstr "Last synchronization"
+
+msgid "Save configuration"
+msgstr "Save configuration"
+
+msgid "Test connection"
+msgstr "Test connection"
+
+msgid "Configuration saved successfully"
+msgstr "Configuration saved successfully"
+
+msgid "Failed to save configuration"
+msgstr "Failed to save configuration"
+
+msgid "Connection successful!"
+msgstr "Connection successful!"
+
+msgid "Connection failed. Please check your credentials."
+msgstr "Connection failed. Please check your credentials."
+
+msgid "Setup Instructions"
+msgstr "Setup Instructions"
+
+msgid "How to configure Microsoft Entra ID"
+msgstr "How to configure Microsoft Entra ID"
+
+msgid "Go to Azure Portal > Microsoft Entra ID > App registrations"
+msgstr "Go to Azure Portal > Microsoft Entra ID > App registrations"
+
+msgid "Click \"New registration\""
+msgstr "Click \"New registration\""
+
+msgid "Enter a name (e.g., \"GLPI Hierarchy Sync\")"
+msgstr "Enter a name (e.g., \"GLPI Hierarchy Sync\")"
+
+msgid "Copy the Application (client) ID"
+msgstr "Copy the Application (client) ID"
+
+msgid "Copy the Directory (tenant) ID"
+msgstr "Copy the Directory (tenant) ID"
+
+msgid "Go to \"Certificates & secrets\" and create a new client secret"
+msgstr "Go to \"Certificates & secrets\" and create a new client secret"
+
+msgid "Copy the secret value (you won't be able to see it again!)"
+msgstr "Copy the secret value (you won't be able to see it again!)"
+
+msgid "Go to \"API permissions\" and add:"
+msgstr "Go to \"API permissions\" and add:"
+
+msgid "Click \"Grant admin consent\""
+msgstr "Click \"Grant admin consent\""
