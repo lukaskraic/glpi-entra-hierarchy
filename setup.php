@@ -26,8 +26,10 @@
 
 use GlpiPlugin\EntraHierarchy\EntraConfig;
 use GlpiPlugin\EntraHierarchy\EntraSync;
+use GlpiPlugin\EntraHierarchy\EntraAuth;
+use Glpi\Http\Firewall;
 
-define('PLUGIN_ENTRAHIERARCHY_VERSION', '1.2.0');
+define('PLUGIN_ENTRAHIERARCHY_VERSION', '1.4.0');
 
 /**
  * Initialize the plugin
@@ -38,9 +40,28 @@ function plugin_init_glpientrahierarchy()
 
     $PLUGIN_HOOKS['csrf_compliant']['glpientrahierarchy'] = true;
 
+    // Register OAuth endpoints as public (no authentication required)
+    $Plugin = new Plugin();
+    if ($Plugin->isActivated('glpientrahierarchy')) {
+        Firewall::addPluginStrategyForLegacyScripts(
+            'glpientrahierarchy',
+            '#^/front/oauth_login\.php#',
+            Firewall::STRATEGY_NO_CHECK
+        );
+        Firewall::addPluginStrategyForLegacyScripts(
+            'glpientrahierarchy',
+            '#^/front/oauth_callback\.php#',
+            Firewall::STRATEGY_NO_CHECK
+        );
+    }
+
     // Register classes
     Plugin::registerClass(EntraConfig::class, ['addtabon' => 'Config']);
     Plugin::registerClass(EntraSync::class);
+    Plugin::registerClass(EntraAuth::class);
+
+    // Register OAuth SSO login hook
+    $PLUGIN_HOOKS['display_login']['glpientrahierarchy'] = 'plugin_glpientrahierarchy_display_login';
 
     // Add configuration page in Setup
     if (Session::haveRight('config', UPDATE)) {
@@ -56,7 +77,7 @@ function plugin_version_glpientrahierarchy()
     return [
         'name'           => __('Entra Hierarchy Sync', 'glpientrahierarchy'),
         'version'        => PLUGIN_ENTRAHIERARCHY_VERSION,
-        'author'         => 'Lukáš Kraič (lukas.kraic@gmail.com)',
+        'author'         => 'Lukáš Kraic (lukas.kraic@gmail.com)',
         'license'        => 'GPL-3.0+',
         'homepage'       => 'https://github.com/glpi-project/glpientrahierarchy',
         'requirements'   => [

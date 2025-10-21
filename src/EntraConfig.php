@@ -70,6 +70,12 @@ class EntraConfig extends CommonDBTM
             'automap_office_to_location' => isset($input['automap_office_to_location']) ? 1 : 0,
             'sync_hourmin' => $input['sync_hourmin'] ?? 0,
             'sync_hourmax' => $input['sync_hourmax'] ?? 24,
+            'oauth_enabled' => isset($input['oauth_enabled']) ? 1 : 0,
+            'oauth_client_id' => $input['oauth_client_id'] ?? '',
+            'oauth_client_secret' => $input['oauth_client_secret'] ?? '',
+            'oauth_tenant_id' => $input['oauth_tenant_id'] ?? '',
+            'oauth_redirect_uri' => self::generateOAuthRedirectUri(),
+            'oauth_auto_redirect' => $input['oauth_auto_redirect'] ?? 'never',
             'date_mod' => date('Y-m-d H:i:s')
         ];
 
@@ -103,6 +109,17 @@ class EntraConfig extends CommonDBTM
         return !empty($config['client_id']) &&
                !empty($config['client_secret']) &&
                !empty($config['tenant_id']);
+    }
+
+    /**
+     * Generate OAuth redirect URI dynamically from GLPI base URL
+     *
+     * @return string
+     */
+    private static function generateOAuthRedirectUri()
+    {
+        global $CFG_GLPI;
+        return $CFG_GLPI['url_base'] . '/plugins/glpientrahierarchy/front/oauth_callback.php';
     }
 
     /**

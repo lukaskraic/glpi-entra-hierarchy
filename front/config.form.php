@@ -258,11 +258,72 @@ function manualSync() {
 </th>
 </tr>
 
+<!-- Info box about shared credentials -->
+<tr class='tab_bg_1'>
+<td colspan='2'>
+<div style='background-color: #d1ecf1; border-left: 4px solid #0078d4; padding: 12px; margin: 10px 0; border-radius: 4px;'>
+<strong style='color: #004085;'>ℹ️ <?php echo __('Simplified Configuration', 'glpientrahierarchy'); ?></strong>
+<p style='margin: 8px 0 0 0; color: #004085;'>
+<?php echo __('The same Microsoft Entra ID application (Client ID, Client Secret, Tenant ID) is used for both OAuth SSO Login and User Synchronization. This simplifies setup and management.', 'glpientrahierarchy'); ?>
+</p>
+</div>
+</td>
+</tr>
+
+<!-- OAuth Enabled -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Enable OAuth SSO Login', 'glpientrahierarchy'); ?></td>
+<td>
+<?php $checked = ($config && $config['oauth_enabled']) ? 'checked' : ''; ?>
+<input type='checkbox' name='oauth_enabled' <?php echo $checked; ?>>
+<br><small><?php echo __('Allow users to login via Microsoft Entra ID (uses credentials below)', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
+<!-- Auto-redirect to Microsoft SSO -->
+<tr class='tab_bg_1'>
+<td><?php echo __('Auto-redirect to Microsoft SSO', 'glpientrahierarchy'); ?></td>
+<td>
+<select name='oauth_auto_redirect'>
+<?php
+$autoRedirect = $config['oauth_auto_redirect'] ?? 'never';
+$options = [
+    'never' => __('Never - Show login form (default)', 'glpientrahierarchy'),
+    'cookie' => __('If previously used - Remember user preference', 'glpientrahierarchy'),
+    'always' => __('Always - Force Microsoft SSO for all users', 'glpientrahierarchy')
+];
+foreach ($options as $value => $label) {
+    $selected = ($autoRedirect === $value) ? 'selected' : '';
+    echo "<option value='$value' $selected>$label</option>";
+}
+?>
+</select>
+<br><small>
+<?php echo __('Automatically redirect users to Microsoft SSO login page. "Always" bypasses GLPI login form entirely.', 'glpientrahierarchy'); ?><br>
+<strong><?php echo __('⚠️ Emergency access:', 'glpientrahierarchy'); ?></strong> <?php echo __('Use', 'glpientrahierarchy'); ?> <code style='background: #f5f5f5; padding: 2px 6px;'>?no_sso=1</code> <?php echo __('parameter to bypass auto-redirect (e.g. for admin accounts)', 'glpientrahierarchy'); ?>
+</small>
+</td>
+</tr>
+
+<!-- OAuth Redirect URI (read-only, dynamically generated) -->
+<tr class='tab_bg_1'>
+<td><?php echo __('OAuth Redirect URI', 'glpientrahierarchy'); ?></td>
+<td>
+<?php
+global $CFG_GLPI;
+$dynamicRedirectUri = $CFG_GLPI['url_base'] . '/plugins/glpientrahierarchy/front/oauth_callback.php';
+?>
+<input type='text' name='oauth_redirect_uri' size='60' value='<?php echo htmlspecialchars($dynamicRedirectUri, ENT_QUOTES, 'UTF-8'); ?>' readonly style='background-color: #f5f5f5;'>
+<br><small><?php echo __('Copy this URL to your Microsoft Entra ID app registration Redirect URIs (auto-generated from GLPI URL)', 'glpientrahierarchy'); ?></small>
+</td>
+</tr>
+
 <!-- Client ID -->
 <tr class='tab_bg_1'>
 <td><?php echo __('Client ID', 'glpientrahierarchy'); ?> *</td>
 <td>
 <input type='text' name='client_id' size='60' value='<?php echo htmlspecialchars($config['client_id'] ?? '', ENT_QUOTES, 'UTF-8'); ?>' required>
+<br><small><?php echo __('Application (client) ID from Microsoft Entra ID - used for OAuth login and synchronization', 'glpientrahierarchy'); ?></small>
 </td>
 </tr>
 
@@ -271,6 +332,7 @@ function manualSync() {
 <td><?php echo __('Client Secret', 'glpientrahierarchy'); ?> *</td>
 <td>
 <input type='password' name='client_secret' size='60' value='<?php echo htmlspecialchars($config['client_secret'] ?? '', ENT_QUOTES, 'UTF-8'); ?>' required>
+<br><small><?php echo __('Client secret value from Microsoft Entra ID - used for OAuth login and synchronization', 'glpientrahierarchy'); ?></small>
 </td>
 </tr>
 
@@ -279,6 +341,7 @@ function manualSync() {
 <td><?php echo __('Tenant ID', 'glpientrahierarchy'); ?> *</td>
 <td>
 <input type='text' name='tenant_id' size='60' value='<?php echo htmlspecialchars($config['tenant_id'] ?? '', ENT_QUOTES, 'UTF-8'); ?>' required>
+<br><small><?php echo __('Directory (tenant) ID from Microsoft Entra ID - used for OAuth login and synchronization', 'glpientrahierarchy'); ?></small>
 </td>
 </tr>
 
@@ -620,15 +683,261 @@ function manualSync() {
 </form>
 </div>
 
-<!-- Setup instructions -->
+<!-- OAuth SSO Setup Instructions -->
 <div class='center' style='margin-top: 30px;'>
 <table class='tab_cadre_fixe'>
 <tr class='tab_bg_1'>
-<th><?php echo __('Setup Instructions', 'glpientrahierarchy'); ?></th>
+<th style='background-color: #2b2b2b; color: #ffffff;'>
+<h2 style='margin: 8px 0;'><?php echo __('🔐 OAuth 2.0 Single Sign-On (SSO) Setup', 'glpientrahierarchy'); ?></h2>
+</th>
 </tr>
 <tr class='tab_bg_1'>
 <td>
-<h3><?php echo __('How to configure Microsoft Entra ID', 'glpientrahierarchy'); ?></h3>
+<div style='background-color: #d1ecf1; border-left: 4px solid #0078d4; padding: 12px; margin-bottom: 20px; border-radius: 4px;'>
+<strong style='color: #004085;'>ℹ️ <?php echo __('Simplified Setup - One Application', 'glpientrahierarchy'); ?></strong>
+<p style='margin: 8px 0 0 0; color: #004085;'>
+<?php echo __('This plugin uses a SINGLE Microsoft Entra ID application for both OAuth SSO Login and User Synchronization. This simplifies setup while maintaining security. The same credentials (Client ID, Client Secret, Tenant ID) are used for both features.', 'glpientrahierarchy'); ?>
+</p>
+</div>
+
+<h3><?php echo __('Step-by-Step: Configure Microsoft Entra ID', 'glpientrahierarchy'); ?></h3>
+
+<h4 style='margin-top: 20px; color: #0078d4;'>📋 <?php echo __('Part 1: Create Application in Azure Portal', 'glpientrahierarchy'); ?></h4>
+<ol style='line-height: 1.8;'>
+<li><strong><?php echo __('Go to Azure Portal', 'glpientrahierarchy'); ?></strong>: <a href='https://portal.azure.com' target='_blank'>https://portal.azure.com</a></li>
+<li><strong><?php echo __('Navigate to:', 'glpientrahierarchy'); ?></strong> <?php echo __('Microsoft Entra ID', 'glpientrahierarchy'); ?> → <?php echo __('App registrations', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('Click "New registration"', 'glpientrahierarchy'); ?></strong></li>
+<li><strong><?php echo __('Fill in application details:', 'glpientrahierarchy'); ?></strong>
+<ul>
+<li><?php echo __('Name: e.g., "GLPI Entra Integration"', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Supported account types: "Accounts in this organizational directory only (Single tenant)"', 'glpientrahierarchy'); ?></li>
+<li><strong style='color: #d9534f;'><?php echo __('Redirect URI:', 'glpientrahierarchy'); ?></strong>
+<br><code style='background-color: #f5f5f5; padding: 4px 8px; border: 1px solid #ddd; border-radius: 3px; font-family: monospace; display: inline-block; margin-top: 4px;'>
+<?php echo htmlspecialchars($config['oauth_redirect_uri'] ?? 'http://your-glpi-url/plugins/glpientrahierarchy/front/oauth_callback.php', ENT_QUOTES, 'UTF-8'); ?>
+</code>
+<br><small style='color: #856404;'>⚠️ <?php echo __('Copy this EXACT URL from the "OAuth Redirect URI" field above!', 'glpientrahierarchy'); ?></small>
+</li>
+</ul>
+</li>
+<li><strong><?php echo __('Click "Register"', 'glpientrahierarchy'); ?></strong></li>
+</ol>
+
+<h4 style='margin-top: 20px; color: #0078d4;'>🔑 <?php echo __('Part 2: Get Credentials', 'glpientrahierarchy'); ?></h4>
+<ol style='line-height: 1.8;'>
+<li><strong><?php echo __('On the Overview page, copy:', 'glpientrahierarchy'); ?></strong>
+<ul>
+<li><strong><?php echo __('Application (client) ID', 'glpientrahierarchy'); ?></strong> → <?php echo __('Paste into "Client ID" above', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('Directory (tenant) ID', 'glpientrahierarchy'); ?></strong> → <?php echo __('Paste into "Tenant ID" above', 'glpientrahierarchy'); ?></li>
+</ul>
+</li>
+<li><strong><?php echo __('Go to "Certificates & secrets"', 'glpientrahierarchy'); ?></strong> → <?php echo __('Client secrets', 'glpientrahierarchy'); ?> → <?php echo __('New client secret', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Add description and set expiration', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('Copy the secret VALUE immediately', 'glpientrahierarchy'); ?></strong> → <?php echo __('Paste into "Client Secret" above', 'glpientrahierarchy'); ?>
+<br><small style='color: #d9534f;'>⚠️ <?php echo __('You won\'t be able to see the secret again!', 'glpientrahierarchy'); ?></small>
+</li>
+</ol>
+
+<h4 style='margin-top: 20px; color: #0078d4;'>🔐 <?php echo __('Part 3: Configure API Permissions (CRITICAL STEP!)', 'glpientrahierarchy'); ?></h4>
+
+<div style='background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 15px; border-radius: 4px;'>
+<strong style='color: #856404;'>⚠️ <?php echo __('THIS IS THE MOST COMMON SOURCE OF ERRORS!', 'glpientrahierarchy'); ?></strong>
+<p style='margin: 8px 0 0 0; color: #856404;'>
+<?php echo __('You must add BOTH types of permissions (Delegated AND Application) and grant admin consent. Most OAuth login failures are caused by missing or incorrectly configured permissions.', 'glpientrahierarchy'); ?>
+</p>
+</div>
+
+<h5 style='color: #28a745; margin-top: 15px;'>A. <?php echo __('Add DELEGATED Permissions (for OAuth SSO Login)', 'glpientrahierarchy'); ?></h5>
+<ol style='line-height: 2.0;'>
+<li><strong><?php echo __('In Azure Portal, open your app registration', 'glpientrahierarchy'); ?></strong></li>
+<li><?php echo __('Left menu: Click', 'glpientrahierarchy'); ?> <strong>"API permissions"</strong></li>
+<li><?php echo __('If you see', 'glpientrahierarchy'); ?> <code>User.Read</code> <?php echo __('with type "Delegated" already there, KEEP IT (do not remove)', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('Click "Add a permission"', 'glpientrahierarchy'); ?></strong></li>
+<li><?php echo __('Click', 'glpientrahierarchy'); ?> <strong>"Microsoft Graph"</strong></li>
+<li><strong style='color: #28a745;'><?php echo __('Click "Delegated permissions"', 'glpientrahierarchy'); ?></strong> <?php echo __('(NOT Application!)', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Search and check these permissions:', 'glpientrahierarchy'); ?>
+<ul style='margin-top: 8px;'>
+<li><strong>User.Read</strong> <?php echo __('(should already be checked)', 'glpientrahierarchy'); ?></li>
+<li><strong>openid</strong> <?php echo __('(expand "OpenId permissions" section)', 'glpientrahierarchy'); ?></li>
+<li><strong>profile</strong> <?php echo __('(in "OpenId permissions" section)', 'glpientrahierarchy'); ?></li>
+<li><strong>email</strong> <?php echo __('(in "OpenId permissions" section)', 'glpientrahierarchy'); ?></li>
+</ul>
+</li>
+<li><strong><?php echo __('Click "Add permissions" button at bottom', 'glpientrahierarchy'); ?></strong></li>
+<li><?php echo __('You should now see 4 Delegated permissions in the list', 'glpientrahierarchy'); ?></li>
+</ol>
+
+<h5 style='color: #d9534f; margin-top: 20px;'>B. <?php echo __('Add APPLICATION Permissions (for User Sync)', 'glpientrahierarchy'); ?></h5>
+<ol style='line-height: 2.0;'>
+<li><strong><?php echo __('Click "Add a permission" again', 'glpientrahierarchy'); ?></strong></li>
+<li><?php echo __('Click', 'glpientrahierarchy'); ?> <strong>"Microsoft Graph"</strong></li>
+<li><strong style='color: #d9534f;'><?php echo __('Click "Application permissions"', 'glpientrahierarchy'); ?></strong> <?php echo __('(NOT Delegated!)', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Search for', 'glpientrahierarchy'); ?> <strong>"User.Read.All"</strong> <?php echo __('and check it', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Search for', 'glpientrahierarchy'); ?> <strong>"Directory.Read.All"</strong> <?php echo __('and check it', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('Click "Add permissions" button at bottom', 'glpientrahierarchy'); ?></strong></li>
+<li><?php echo __('You should now see 6 total permissions (4 Delegated + 2 Application)', 'glpientrahierarchy'); ?></li>
+</ol>
+
+<h5 style='color: #dc3545; margin-top: 20px;'>C. <?php echo __('Grant Admin Consent (REQUIRED!)', 'glpientrahierarchy'); ?></h5>
+<ol style='line-height: 2.0;'>
+<li><strong style='color: #dc3545;'><?php echo __('Click "Grant admin consent for [your organization]" button', 'glpientrahierarchy'); ?></strong></li>
+<li><?php echo __('Confirm by clicking "Yes" in the popup', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('Wait 10 seconds for the page to refresh', 'glpientrahierarchy'); ?></strong></li>
+<li><?php echo __('Verify ALL permissions now show:', 'glpientrahierarchy'); ?>
+<ul style='margin-top: 8px;'>
+<li><strong style='color: #28a745;'><?php echo __('Green checkmark ✓', 'glpientrahierarchy'); ?></strong> <?php echo __('in Status column', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('"Granted for [your organization]"', 'glpientrahierarchy'); ?></strong> <?php echo __('text visible', 'glpientrahierarchy'); ?></li>
+</ul>
+</li>
+<li><strong style='color: #d9534f;'><?php echo __('If ANY permission shows "Not granted", click "Grant admin consent" again!', 'glpientrahierarchy'); ?></strong></li>
+<li><?php echo __('Wait 2-3 minutes for permissions to fully propagate through Microsoft servers', 'glpientrahierarchy'); ?></li>
+</ol>
+
+<div style='background-color: #d1ecf1; border-left: 4px solid #0078d4; padding: 12px; margin-top: 15px; border-radius: 4px;'>
+<strong style='color: #004085;'>✅ <?php echo __('How to verify permissions are correct:', 'glpientrahierarchy'); ?></strong>
+<ul style='margin: 8px 0 0 20px; color: #004085; line-height: 1.8;'>
+<li><?php echo __('You should see EXACTLY these 6 permissions:', 'glpientrahierarchy'); ?></li>
+<li style='list-style: none; margin-left: 20px;'>
+<table style='width: 100%; margin-top: 10px; border-collapse: collapse;'>
+<tr style='background-color: #f8f9fa;'>
+<th style='padding: 8px; text-align: left; border: 1px solid #dee2e6;'><?php echo __('Permission', 'glpientrahierarchy'); ?></th>
+<th style='padding: 8px; text-align: left; border: 1px solid #dee2e6;'><?php echo __('Type', 'glpientrahierarchy'); ?></th>
+<th style='padding: 8px; text-align: left; border: 1px solid #dee2e6;'><?php echo __('Status', 'glpientrahierarchy'); ?></th>
+</tr>
+<tr>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><strong>User.Read</strong></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><span style='color: #28a745;'>Delegated</span></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'>✓ Granted</td>
+</tr>
+<tr style='background-color: #f8f9fa;'>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><strong>openid</strong></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><span style='color: #28a745;'>Delegated</span></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'>✓ Granted</td>
+</tr>
+<tr>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><strong>profile</strong></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><span style='color: #28a745;'>Delegated</span></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'>✓ Granted</td>
+</tr>
+<tr style='background-color: #f8f9fa;'>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><strong>email</strong></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><span style='color: #28a745;'>Delegated</span></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'>✓ Granted</td>
+</tr>
+<tr>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><strong>User.Read.All</strong></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><span style='color: #d9534f;'>Application</span></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'>✓ Granted</td>
+</tr>
+<tr style='background-color: #f8f9fa;'>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><strong>Directory.Read.All</strong></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'><span style='color: #d9534f;'>Application</span></td>
+<td style='padding: 8px; border: 1px solid #dee2e6;'>✓ Granted</td>
+</tr>
+</table>
+</li>
+</ul>
+</div>
+
+<h4 style='margin-top: 20px; color: #0078d4;'>✅ <?php echo __('Part 4: Enable Features and Test', 'glpientrahierarchy'); ?></h4>
+<ol style='line-height: 1.8;'>
+<li><?php echo __('Enter Client ID, Client Secret, and Tenant ID in the fields above', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Check "Enable OAuth SSO Login" if you want SSO', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Check "Enable automatic synchronization" if you want user sync', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Click "Save configuration"', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Click "Test connection" to verify credentials', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Log out from GLPI', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('You should see a "Sign in with Microsoft" button on the login page', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Click the button - you will be redirected to Microsoft login', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('After successful authentication, you will be redirected back to GLPI and logged in', 'glpientrahierarchy'); ?></li>
+</ol>
+
+<div style='background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 12px; margin-top: 20px; border-radius: 4px;'>
+<strong style='color: #721c24;'>🚨 <?php echo __('Troubleshooting OAuth SSO', 'glpientrahierarchy'); ?></strong>
+
+<h5 style='color: #721c24; margin-top: 12px;'><?php echo __('Problem: Nothing happens when clicking "Sign in with Microsoft"', 'glpientrahierarchy'); ?></h5>
+<ul style='margin: 4px 0 0 20px; color: #721c24; line-height: 1.8;'>
+<li><strong><?php echo __('Check 1:', 'glpientrahierarchy'); ?></strong> <?php echo __('Is "Enable OAuth SSO Login" checkbox checked in config above? If not, check it and Save.', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('Check 2:', 'glpientrahierarchy'); ?></strong> <?php echo __('Are Client ID, Client Secret, and Tenant ID filled in? If not, fill them and Save.', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('Check 3:', 'glpientrahierarchy'); ?></strong> <?php echo __('Open browser Developer Tools (F12) → Console tab → Click the button again → Check for JavaScript errors', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('Check 4:', 'glpientrahierarchy'); ?></strong> <?php echo __('Try opening this URL directly in new tab:', 'glpientrahierarchy'); ?> <code style='background: #fff; padding: 2px 6px;'><?php echo htmlspecialchars($config['oauth_redirect_uri'] ? str_replace('oauth_callback.php', 'oauth_login.php', $config['oauth_redirect_uri']) : 'http://your-glpi-url/plugins/glpientrahierarchy/front/oauth_login.php', ENT_QUOTES, 'UTF-8'); ?></code></li>
+</ul>
+
+<h5 style='color: #721c24; margin-top: 15px;'><?php echo __('Problem: Error "AADSTS50011: The redirect URI does not match"', 'glpientrahierarchy'); ?></h5>
+<ul style='margin: 4px 0 0 20px; color: #721c24; line-height: 1.8;'>
+<li><strong><?php echo __('Fix:', 'glpientrahierarchy'); ?></strong> <?php echo __('In Azure Portal → Your App → Authentication → Web → Redirect URIs', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Make sure it matches EXACTLY (case-sensitive, including http/https, port, trailing slash):', 'glpientrahierarchy'); ?>
+<br><code style='background: #fff; padding: 4px 8px; display: inline-block; margin-top: 4px;'><?php echo htmlspecialchars($config['oauth_redirect_uri'] ?? 'Check config above', ENT_QUOTES, 'UTF-8'); ?></code>
+</li>
+</ul>
+
+<h5 style='color: #721c24; margin-top: 15px;'><?php echo __('Problem: Error "AADSTS7000218: The request body must contain the following parameter: client_assertion"', 'glpientrahierarchy'); ?></h5>
+<ul style='margin: 4px 0 0 20px; color: #721c24; line-height: 1.8;'>
+<li><strong><?php echo __('Fix:', 'glpientrahierarchy'); ?></strong> <?php echo __('In Azure Portal → Your App → Authentication → Advanced settings', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Set "Allow public client flows" to', 'glpientrahierarchy'); ?> <strong>"No"</strong></li>
+<li><?php echo __('Make sure Client Secret is correctly entered in GLPI config above', 'glpientrahierarchy'); ?></li>
+</ul>
+
+<h5 style='color: #721c24; margin-top: 15px;'><?php echo __('Problem: Error "AADSTS650053: The application asked for permissions that require user consent"', 'glpientrahierarchy'); ?></h5>
+<ul style='margin: 4px 0 0 20px; color: #721c24; line-height: 1.8;'>
+<li><strong><?php echo __('Fix:', 'glpientrahierarchy'); ?></strong> <?php echo __('Admin consent not granted! Go back to Azure Portal → Your App → API permissions', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Click "Grant admin consent for [your organization]" button', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Verify ALL 6 permissions show green checkmark ✓ and "Granted" status', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Wait 2-3 minutes, then try again', 'glpientrahierarchy'); ?></li>
+</ul>
+
+<h5 style='color: #721c24; margin-top: 15px;'><?php echo __('Problem: Login successful but "User not found in GLPI"', 'glpientrahierarchy'); ?></h5>
+<ul style='margin: 4px 0 0 20px; color: #721c24; line-height: 1.8;'>
+<li><strong><?php echo __('Explanation:', 'glpientrahierarchy'); ?></strong> <?php echo __('OAuth SSO only AUTHENTICATES users, it does not CREATE them. Users must exist in GLPI first.', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('Solution 1:', 'glpientrahierarchy'); ?></strong> <?php echo __('Run User Synchronization (section below) to automatically import users from Entra ID', 'glpientrahierarchy'); ?></li>
+<li><strong><?php echo __('Solution 2:', 'glpientrahierarchy'); ?></strong> <?php echo __('Manually create the user in GLPI (Setup → Users → Add) with same email address as in Entra ID', 'glpientrahierarchy'); ?></li>
+</ul>
+
+<h5 style='color: #721c24; margin-top: 15px;'><?php echo __('Problem: Error "AADSTS700016: Application not found in directory"', 'glpientrahierarchy'); ?></h5>
+<ul style='margin: 4px 0 0 20px; color: #721c24; line-height: 1.8;'>
+<li><strong><?php echo __('Fix:', 'glpientrahierarchy'); ?></strong> <?php echo __('Client ID or Tenant ID is incorrect. Double-check in Azure Portal → Your App → Overview', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Make sure you copied the FULL IDs (36 characters with dashes)', 'glpientrahierarchy'); ?></li>
+</ul>
+
+<h5 style='color: #721c24; margin-top: 15px;'><?php echo __('Problem: Error "invalid_client: The provided value for the secret is incorrect"', 'glpientrahierarchy'); ?></h5>
+<ul style='margin: 4px 0 0 20px; color: #721c24; line-height: 1.8;'>
+<li><strong><?php echo __('Fix:', 'glpientrahierarchy'); ?></strong> <?php echo __('Client Secret is incorrect or expired', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('In Azure Portal → Your App → Certificates & secrets → Create new secret', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Copy the VALUE (not the Secret ID!) and paste into GLPI config above', 'glpientrahierarchy'); ?></li>
+</ul>
+
+<div style='background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 10px; margin-top: 15px; border-radius: 4px;'>
+<strong><?php echo __('Still not working? Enable debug logs:', 'glpientrahierarchy'); ?></strong>
+<ol style='margin-top: 8px;'>
+<li><?php echo __('Try clicking "Sign in with Microsoft" button', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Check GLPI error log:', 'glpientrahierarchy'); ?> <code style='background: #fff; padding: 2px 6px;'>files/_log/php-errors.log</code></li>
+<li><?php echo __('Look for lines containing "oauth_login" or "oauth_callback"', 'glpientrahierarchy'); ?></li>
+<li><?php echo __('Error messages will tell you exactly what is wrong', 'glpientrahierarchy'); ?></li>
+</ol>
+</div>
+</div>
+</td>
+</tr>
+</table>
+</div>
+
+<!-- Synchronization Setup Instructions -->
+<div class='center' style='margin-top: 30px;'>
+<table class='tab_cadre_fixe'>
+<tr class='tab_bg_1'>
+<th style='background-color: #28a745; color: #ffffff;'>
+<h2 style='margin: 8px 0;'><?php echo __('🔄 User Synchronization Setup (Optional)', 'glpientrahierarchy'); ?></h2>
+</th>
+</tr>
+<tr class='tab_bg_1'>
+<td>
+<div style='background-color: #d1ecf1; border-left: 4px solid #0078d4; padding: 12px; margin-bottom: 20px; border-radius: 4px;'>
+<strong style='color: #004085;'>ℹ️ <?php echo __('What is User Synchronization?', 'glpientrahierarchy'); ?></strong>
+<p style='margin: 8px 0 0 0; color: #004085;'>
+<?php echo __('Automatic synchronization imports users from Microsoft Entra ID into GLPI database. This is SEPARATE from OAuth SSO login. Synchronization runs in background and keeps user data up-to-date (names, emails, departments, etc.).', 'glpientrahierarchy'); ?>
+</p>
+</div>
+
+<h3><?php echo __('Step-by-Step: Configure Microsoft Entra ID for User Synchronization', 'glpientrahierarchy'); ?></h3>
 <ol>
 <li><strong><?php echo __('Go to Azure Portal', 'glpientrahierarchy'); ?></strong> → <?php echo __('Microsoft Entra ID', 'glpientrahierarchy'); ?> → <?php echo __('App registrations', 'glpientrahierarchy'); ?></li>
 <li><strong><?php echo __('Click "New registration"', 'glpientrahierarchy'); ?></strong></li>

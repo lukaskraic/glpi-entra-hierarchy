@@ -1,0 +1,114 @@
+/**
+ * OAuth 2.0 SSO Login Button Styling
+ * Microsoft Entra ID themed button for GLPI login page
+ * Modern, professional design with smooth animations
+ */
+
+.microsoft-login-container {
+    margin: 24px 0;
+    text-align: center;
+    width: 100%;
+}
+
+.microsoft-sso-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    background: #2b2b2b;
+    border: 2px solid #2b2b2b;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    max-width: 360px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.microsoft-sso-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.microsoft-sso-btn:hover::before {
+    width: 100%;
+}
+
+.microsoft-sso-btn:hover {
+    background: #1a1a1a;
+    border-color: #1a1a1a;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    transform: translateY(-2px);
+}
+
+.microsoft-sso-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+}
+
+.microsoft-sso-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.3), 0 3px 12px rgba(0, 0, 0, 0.12);
+}
+
+.microsoft-sso-btn svg {
+    margin-right: 12px;
+    width: 21px;
+    height: 21px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.microsoft-login-separator {
+    margin: 28px 0;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #6c757d;
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.microsoft-login-separator::before,
+.microsoft-login-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #dee2e6 20%, #dee2e6 80%, transparent);
+}
+
+.microsoft-login-separator span {
+    padding: 0 16px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .microsoft-sso-btn {
+        padding: 12px 24px;
+        font-size: 14px;
+        max-width: 100%;
+    }
+
+    .microsoft-sso-btn svg {
+        width: 18px;
+        height: 18px;
+        margin-right: 10px;
+    }
+}

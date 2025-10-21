@@ -211,7 +211,15 @@ class EntraSync extends CommonDBTM
             ]);
 
             if ($userResult->count() > 0) {
+                // User exists in GLPI but not in mapping - update basic fields
                 $glpiUserId = $userResult->current()['id'];
+                $updated = self::updateGlpiUser($glpiUserId, $entraUser);
+                if ($updated) {
+                    $action = 'updated';
+                    if ($task) {
+                        $task->log(sprintf(__('Found and updated existing user: %s', 'glpientrahierarchy'), $upn));
+                    }
+                }
             } else {
                 // Create new user
                 $glpiUserId = self::createGlpiUser($entraUser);
@@ -267,6 +275,14 @@ class EntraSync extends CommonDBTM
                 ],
                 ['id' => $mapping['id']]
             );
+
+            // Update GLPI user basic fields for existing users
+            if ($glpiUserId) {
+                $updated = self::updateGlpiUser($glpiUserId, $entraUser);
+                if ($updated && $action !== 'created') {
+                    $action = 'updated';
+                }
+            }
         }
 
         // Synchronize accountEnabled to is_active in GLPI
@@ -294,6 +310,12 @@ class EntraSync extends CommonDBTM
             if ($updated && $action !== 'created') {
                 $action = 'updated';
             }
+        }
+
+        // Apply automatic mapping from Entra fields (for both new and existing users)
+        if ($glpiUserId) {
+            $config = EntraConfig::getConfig();
+            self::applyAutoMapping($glpiUserId, $entraUser, $config);
         }
 
         return $action;
@@ -326,7 +348,148 @@ class EntraSync extends CommonDBTM
 
         $userId = $user->add($userData);
 
+        // Assign default profile and entity to new user
+        if ($userId) {
+            $config = EntraConfig::getConfig();
+
+            if ($config && $config['default_profiles_id'] > 0) {
+                $profileUser = new \Profile_User();
+                $profileUser->add([
+                    'users_id' => $userId,
+                    'profiles_id' => $config['default_profiles_id'],
+                    'entities_id' => $config['default_entities_id'] ?? 0,
+                    'is_recursive' => $config['profile_is_recursive'] ?? 1,
+                    'is_dynamic' => 1
+                ]);
+
+                error_log("EntraSync::createGlpiUser() - Assigned profile {$config['default_profiles_id']} and entity {$config['default_entities_id']} to user {$userId}");
+            }
+
+            // Assign default group
+            if ($config && $config['default_groups_id'] > 0) {
+                $groupUser = new \Group_User();
+                $groupUser->add([
+                    'users_id' => $userId,
+                    'groups_id' => $config['default_groups_id'],
+                    'is_dynamic' => 1
+                ]);
+
+                error_log("EntraSync::createGlpiUser() - Assigned group {$config['default_groups_id']} to user {$userId}");
+            }
+
+            // Update user with location, category, and language
+            if ($config) {
+                $updateData = ['id' => $userId];
+
+                if ($config['default_locations_id'] > 0) {
+                    $updateData['locations_id'] = $config['default_locations_id'];
+                }
+
+                if ($config['default_usercategories_id'] > 0) {
+                    $updateData['usercategories_id'] = $config['default_usercategories_id'];
+                }
+
+                if (!empty($config['default_language'])) {
+                    $updateData['language'] = $config['default_language'];
+                }
+
+                if (count($updateData) > 1) { // More than just 'id'
+                    $user->update($updateData);
+                    error_log("EntraSync::createGlpiUser() - Updated user {$userId} with location, category, language");
+                }
+            }
+
+            // Apply automatic mapping from Entra fields
+            if ($config) {
+                self::applyAutoMapping($userId, $entraUser, $config);
+            }
+        }
+
         return $userId ?: false;
+    }
+
+    /**
+     * Update existing GLPI user from Entra ID data
+     *
+     * Updates basic user fields (name, phone, title) for existing users.
+     * Does NOT apply default settings (profiles, entities, groups) to avoid overwriting manual configurations.
+     *
+     * @param int $glpiUserId GLPI user ID
+     * @param array $entraUser Entra user data
+     * @return bool True if user was updated
+     */
+    private static function updateGlpiUser($glpiUserId, $entraUser)
+    {
+        global $DB;
+
+        $user = new User();
+        if (!$user->getFromDB($glpiUserId)) {
+            return false;
+        }
+
+        $updateData = ['id' => $glpiUserId];
+        $changed = false;
+
+        // Update realname (surname)
+        $newRealname = $entraUser['surname'] ?? '';
+        if ($user->fields['realname'] !== $newRealname) {
+            $updateData['realname'] = $newRealname;
+            $changed = true;
+        }
+
+        // Update firstname (givenName)
+        $newFirstname = $entraUser['givenName'] ?? '';
+        if ($user->fields['firstname'] !== $newFirstname) {
+            $updateData['firstname'] = $newFirstname;
+            $changed = true;
+        }
+
+        // Update phone (businessPhones[0])
+        $newPhone = '';
+        if (isset($entraUser['businessPhones']) && is_array($entraUser['businessPhones']) && count($entraUser['businessPhones']) > 0) {
+            $newPhone = $entraUser['businessPhones'][0];
+        }
+        if ($user->fields['phone'] !== $newPhone) {
+            $updateData['phone'] = $newPhone;
+            $changed = true;
+        }
+
+        // Update mobile (mobilePhone)
+        $newMobile = $entraUser['mobilePhone'] ?? '';
+        if ($user->fields['mobile'] !== $newMobile) {
+            $updateData['mobile'] = $newMobile;
+            $changed = true;
+        }
+
+        // Update phone2 (businessPhones[1] if exists)
+        $newPhone2 = '';
+        if (isset($entraUser['businessPhones']) && is_array($entraUser['businessPhones']) && count($entraUser['businessPhones']) > 1) {
+            $newPhone2 = $entraUser['businessPhones'][1];
+        }
+        if ($user->fields['phone2'] !== $newPhone2) {
+            $updateData['phone2'] = $newPhone2;
+            $changed = true;
+        }
+
+        // Update job title (store in comment field for now - GLPI doesn't have dedicated field)
+        // Note: usertitles_id is a dropdown, we would need to create/find matching title
+        // For now, we'll update the comment field with job title info
+        if (!empty($entraUser['jobTitle'])) {
+            $newComment = sprintf(__('Job Title: %s (synced from Entra ID)', 'glpientrahierarchy'), $entraUser['jobTitle']);
+            // Only update if comment doesn't already contain this info
+            if (strpos($user->fields['comment'], $entraUser['jobTitle']) === false) {
+                $updateData['comment'] = $newComment;
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            $user->update($updateData);
+            error_log("EntraSync::updateGlpiUser() - Updated user {$glpiUserId} ({$entraUser['userPrincipalName']})");
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -716,6 +879,121 @@ class EntraSync extends CommonDBTM
         }
 
         return $stats;
+    }
+
+    /**
+     * Apply automatic mapping from Entra fields to GLPI entities
+     *
+     * @param int $glpiUserId GLPI user ID
+     * @param array $entraUser Entra user data
+     * @param array|false $config Plugin configuration
+     * @return void
+     */
+    private static function applyAutoMapping($glpiUserId, $entraUser, $config)
+    {
+        global $DB;
+
+        if (!$config) {
+            return;
+        }
+
+        // Automap: department → group
+        if (!empty($config['automap_department_to_group']) && !empty($entraUser['department'])) {
+            $department = trim($entraUser['department']);
+
+            // Find or create group
+            $groupResult = $DB->request([
+                'FROM' => 'glpi_groups',
+                'WHERE' => ['name' => $department],
+                'LIMIT' => 1
+            ]);
+
+            $groupId = null;
+            if ($groupResult->count() > 0) {
+                $groupId = $groupResult->current()['id'];
+            } else {
+                // Create new group
+                $group = new \Group();
+                $groupId = $group->add([
+                    'name' => $department,
+                    'comment' => 'Auto-created from Entra ID department field',
+                    'is_recursive' => 1
+                ]);
+            }
+
+            // Assign user to group if not already assigned
+            if ($groupId) {
+                $existingAssignment = $DB->request([
+                    'FROM' => 'glpi_groups_users',
+                    'WHERE' => [
+                        'users_id' => $glpiUserId,
+                        'groups_id' => $groupId
+                    ],
+                    'LIMIT' => 1
+                ]);
+
+                if ($existingAssignment->count() === 0) {
+                    $groupUser = new \Group_User();
+                    $groupUser->add([
+                        'users_id' => $glpiUserId,
+                        'groups_id' => $groupId,
+                        'is_dynamic' => 1
+                    ]);
+
+                    error_log("EntraSync::applyAutoMapping() - Mapped user {$glpiUserId} to department group: {$department} (ID: {$groupId})");
+                }
+            }
+        }
+
+        // Automap: company → entity
+        if (!empty($config['automap_company_to_entity']) && !empty($entraUser['companyName'])) {
+            $companyName = trim($entraUser['companyName']);
+
+            // Find matching entity by name
+            $entityResult = $DB->request([
+                'FROM' => 'glpi_entities',
+                'WHERE' => ['name' => $companyName],
+                'LIMIT' => 1
+            ]);
+
+            if ($entityResult->count() > 0) {
+                $entityId = $entityResult->current()['id'];
+
+                // Update user's entity in Profile_User
+                $DB->update(
+                    'glpi_profiles_users',
+                    ['entities_id' => $entityId],
+                    ['users_id' => $glpiUserId]
+                );
+
+                error_log("EntraSync::applyAutoMapping() - Mapped user {$glpiUserId} to company entity: {$companyName} (ID: {$entityId})");
+            }
+        }
+
+        // Automap: office → location
+        if (!empty($config['automap_office_to_location']) && !empty($entraUser['officeLocation'])) {
+            $officeLocation = trim($entraUser['officeLocation']);
+
+            // Find matching location by name
+            $locationResult = $DB->request([
+                'FROM' => 'glpi_locations',
+                'WHERE' => ['name' => $officeLocation],
+                'LIMIT' => 1
+            ]);
+
+            if ($locationResult->count() > 0) {
+                $locationId = $locationResult->current()['id'];
+
+                // Update user's location
+                $user = new User();
+                $user->update([
+                    'id' => $glpiUserId,
+                    'locations_id' => $locationId
+                ]);
+
+                error_log("EntraSync::applyAutoMapping() - Mapped user {$glpiUserId} to office location: {$officeLocation} (ID: {$locationId})");
+            }
+        }
     }
 
     /**

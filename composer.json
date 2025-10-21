@@ -1,0 +1,34 @@
+{
+    "name": "glpi/glpientrahierarchy",
+    "description": "GLPI plugin for synchronizing organizational hierarchy from Microsoft Entra ID with OAuth 2.0 SSO support",
+    "type": "glpi-plugin",
+    "keywords": ["glpi", "plugin", "microsoft", "entra-id", "azure-ad", "oauth", "sso", "hierarchy"],
+    "homepage": "https://github.com/glpi-project/glpientrahierarchy",
+    "license": "GPL-3.0+",
+    "authors": [
+        {
+            "name": "Lukáš Kraič",
+            "email": "lukas.kraic@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "firebase/php-jwt": "^6.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "GlpiPlugin\\EntraHierarchy\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

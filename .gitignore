@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Composer
+/vendor/
+composer.lock
+
+# GLPI
+*.log
+
+# Ignore AI instructions
+.github/instructions/codacy.instructions.md

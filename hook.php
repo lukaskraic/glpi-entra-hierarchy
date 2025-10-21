@@ -25,6 +25,7 @@
  */
 
 use GlpiPlugin\EntraHierarchy\EntraSync;
+use GlpiPlugin\EntraHierarchy\EntraConfig;
 
 /**
  * Install the plugin - create tables and cron tasks
@@ -100,6 +101,26 @@ function plugin_glpientrahierarchy_install()
             if (!$DB->fieldExists('glpi_plugin_entrahierarchy_configs', $field)) {
                 $DB->doQuery($alterQuery) or die($DB->error());
             }
+        }
+
+        // Migration 1.3.0: Add OAuth 2.0 fields
+        $oauthFields = [
+            'oauth_enabled' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `oauth_enabled` tinyint NOT NULL DEFAULT '0'",
+            'oauth_client_id' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `oauth_client_id` varchar(255) DEFAULT NULL",
+            'oauth_client_secret' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `oauth_client_secret` varchar(255) DEFAULT NULL",
+            'oauth_tenant_id' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `oauth_tenant_id` varchar(255) DEFAULT NULL",
+            'oauth_redirect_uri' => "ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `oauth_redirect_uri` varchar(500) DEFAULT NULL"
+        ];
+
+        foreach ($oauthFields as $field => $alterQuery) {
+            if (!$DB->fieldExists('glpi_plugin_entrahierarchy_configs', $field)) {
+                $DB->doQuery($alterQuery) or die($DB->error());
+            }
+        }
+
+        // Migration 1.4.0: Add auto-redirect option
+        if (!$DB->fieldExists('glpi_plugin_entrahierarchy_configs', 'oauth_auto_redirect')) {
+            $DB->doQuery("ALTER TABLE `glpi_plugin_entrahierarchy_configs` ADD COLUMN `oauth_auto_redirect` varchar(20) NOT NULL DEFAULT 'never'") or die($DB->error());
         }
     }
 
@@ -237,4 +258,85 @@ function plugin_glpientrahierarchy_uninstall()
     CronTask::unregister('glpientrahierarchy');
 
     return true;
+}
+
+/**
+ * Add OAuth 2.0 SSO button to login page
+ *
+ * Hook function called by GLPI on login page display
+ */
+function plugin_glpientrahierarchy_display_login()
+{
+    // Explicitly load EntraConfig class before autoloader is ready
+    require_once(Plugin::getPhpDir('glpientrahierarchy') . '/src/EntraConfig.php');
+
+    // Get OAuth configuration
+    $config = \GlpiPlugin\EntraHierarchy\EntraConfig::getConfig();
+
+    // Only show OAuth button if enabled
+    if (empty($config['oauth_enabled']) || $config['oauth_enabled'] != 1) {
+        return;
+    }
+
+    $oauthLoginUrl = Plugin::getWebDir('glpientrahierarchy') . '/front/oauth_login.php';
+    $autoRedirect = $config['oauth_auto_redirect'] ?? 'never';
+
+    // Add CSS for Microsoft button styling
+    echo '<link rel="stylesheet" href="' . Plugin::getWebDir('glpientrahierarchy') . '/css/login.css">';
+
+    // Add auto-redirect JavaScript if enabled
+    if ($autoRedirect !== 'never') {
+        echo '<script>
+        (function() {
+            // Check if SSO bypass parameter is present
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has("no_sso")) {
+                console.log("EntraHierarchy: SSO auto-redirect bypassed via ?no_sso parameter");
+                return;
+            }
+
+            // Check auto-redirect mode
+            const autoRedirectMode = ' . json_encode($autoRedirect) . ';
+
+            if (autoRedirectMode === "always") {
+                console.log("EntraHierarchy: Auto-redirecting to Microsoft SSO (mode: always)");
+                // Set cookie to remember this preference
+                document.cookie = "glpi_entra_sso_preferred=1; path=/; max-age=31536000; SameSite=Lax";
+                window.location.href = ' . json_encode($oauthLoginUrl) . ';
+            } else if (autoRedirectMode === "cookie") {
+                // Check if user previously used Microsoft SSO
+                const cookies = document.cookie.split(";");
+                let hasSSOCookie = false;
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.startsWith("glpi_entra_sso_preferred=")) {
+                        hasSSOCookie = true;
+                        break;
+                    }
+                }
+
+                if (hasSSOCookie) {
+                    console.log("EntraHierarchy: Auto-redirecting to Microsoft SSO (mode: cookie found)");
+                    window.location.href = ' . json_encode($oauthLoginUrl) . ';
+                } else {
+                    console.log("EntraHierarchy: No SSO cookie found, showing login form");
+                }
+            }
+        })();
+        </script>';
+    }
+
+    // Add Microsoft SSO button HTML
+    echo '<div class="microsoft-login-container">';
+    echo '    <a href="' . $oauthLoginUrl . '" class="microsoft-sso-btn" onclick="document.cookie=\'glpi_entra_sso_preferred=1; path=/; max-age=31536000; SameSite=Lax\';">';
+    echo '        <svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">';
+    echo '            <rect x="1" y="1" width="9" height="9" fill="#F25022"/>';
+    echo '            <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>';
+    echo '            <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>';
+    echo '            <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>';
+    echo '        </svg>';
+    echo '        Sign in with Microsoft';
+    echo '    </a>';
+    echo '</div>';
+    echo '<div class="microsoft-login-separator"><span>or</span></div>';
 }
