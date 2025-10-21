@@ -2,7 +2,7 @@
 /*
  -------------------------------------------------------------------------
  Entra Hierarchy plugin for GLPI
- Copyright (C) 2024 by Lukáš Kraič (lukas.kraic@gmail.com)
+ Copyright (C) 2025 by Lukáš Kraic (lukas.kraic@gmail.com)
  -------------------------------------------------------------------------
 
  LICENSE

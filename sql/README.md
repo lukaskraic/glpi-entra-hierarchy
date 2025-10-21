@@ -81,6 +81,65 @@ mysql -u username -p database_name < sql/migration-1.1.0.sql
 
 ---
 
+### `migration-1.3.0.sql`
+**Purpose:** Migration script from version 1.1.0 to 1.3.0
+
+**Adds:**
+- **2 columns** to `glpi_plugin_entrahierarchy_configs`:
+  - `oauth_enabled` - Enable/disable OAuth 2.0 SSO
+  - `oauth_redirect_uri` - OAuth callback URL for SSO
+
+**When to use:**
+- Upgrading from 1.1.0 (or earlier) to 1.3.0
+- Adding OAuth 2.0 Single Sign-On functionality
+
+**How to run:**
+```bash
+# Docker environment
+docker exec -i glpi-mysql mysql -u root -prootpassword glpi < sql/migration-1.3.0.sql
+
+# Standard MySQL
+mysql -u username -p database_name < sql/migration-1.3.0.sql
+```
+
+**New features in 1.3.0:**
+- OAuth 2.0 Single Sign-On (SSO)
+- Microsoft Entra ID authentication
+- Automatic user provisioning on login
+- CSRF protection with state validation
+- Secure token handling
+
+---
+
+### `migration-1.4.0.sql`
+**Purpose:** Migration script from version 1.3.0 to 1.4.0
+
+**Adds:**
+- **1 column** to `glpi_plugin_entrahierarchy_configs`:
+  - `oauth_auto_redirect` - Auto-redirect mode (never/cookie/always)
+
+**When to use:**
+- Upgrading from 1.3.0 to 1.4.0
+- Adding automatic SSO redirect functionality
+
+**How to run:**
+```bash
+# Docker environment
+docker exec -i glpi-mysql mysql -u root -prootpassword glpi < sql/migration-1.4.0.sql
+
+# Standard MySQL
+mysql -u username -p database_name < sql/migration-1.4.0.sql
+```
+
+**New features in 1.4.0:**
+- Automatic redirect to Microsoft SSO
+- Three redirect modes (never/cookie/always)
+- Cookie-based user preference tracking
+- Emergency escape mechanism (?no_sso=1)
+- Console logging for debugging
+
+---
+
 ## Installation Methods
 
 ### Method 1: Plugin Install (Recommended)
@@ -123,6 +182,8 @@ docker exec -i glpi-mysql mysql -u root -prootpassword glpi < sql/migration-1.1.
 |---------|-------------|----------|---------|
 | 1.0.0 | 2024-10-16 | schema-1.0.0.sql | Initial release, basic sync |
 | 1.1.0 | 2024-10-17 | migration-1.1.0.sql | Advanced filtering, deleted user handling |
+| 1.3.0 | 2025-01-20 | migration-1.3.0.sql | OAuth 2.0 SSO, CSRF protection |
+| 1.4.0 | 2025-01-21 | migration-1.4.0.sql | Automatic SSO redirect (never/cookie/always) |
 
 ---
 
@@ -178,5 +239,5 @@ docker exec glpi-mysql mysql -u root -prootpassword glpi \
 ## Support
 
 - Plugin documentation: See main README.md
-- Issue tracker: https://github.com/yourorg/glpientrahierarchy/issues
+- Issue tracker: https://github.com/lukaskraic/glpi-entra-hierarchy/issues
 - GLPI forum: https://forum.glpi-project.org
