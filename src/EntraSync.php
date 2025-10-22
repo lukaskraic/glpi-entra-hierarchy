@@ -412,7 +412,7 @@ class EntraSync extends CommonDBTM
      * Update existing GLPI user from Entra ID data
      *
      * Updates basic user fields (name, phone, title) for existing users.
-     * Does NOT apply default settings (profiles, entities, groups) to avoid overwriting manual configurations.
+     * Also ensures default profile/entity settings are applied if user has dynamic profile assignment.
      *
      * @param int $glpiUserId GLPI user ID
      * @param array $entraUser Entra user data
@@ -429,6 +429,59 @@ class EntraSync extends CommonDBTM
 
         $updateData = ['id' => $glpiUserId];
         $changed = false;
+
+        // Ensure default profile/entity is assigned if configured
+        // Only update dynamic profiles (is_dynamic = 1) to avoid overwriting manual assignments
+        $config = EntraConfig::getConfig();
+        if ($config && $config['default_profiles_id'] > 0) {
+            // Check current profile assignment
+            $profileResult = $DB->request([
+                'FROM' => 'glpi_profiles_users',
+                'WHERE' => [
+                    'users_id' => $glpiUserId,
+                    'is_dynamic' => 1 // Only check dynamic (auto-assigned) profiles
+                ],
+                'LIMIT' => 1
+            ]);
+
+            if ($profileResult->count() > 0) {
+                $currentProfile = $profileResult->current();
+
+                // If current profile doesn't match configured default, update it
+                if ($currentProfile['profiles_id'] != $config['default_profiles_id'] ||
+                    $currentProfile['entities_id'] != ($config['default_entities_id'] ?? 0)) {
+
+                    $DB->update(
+                        'glpi_profiles_users',
+                        [
+                            'profiles_id' => $config['default_profiles_id'],
+                            'entities_id' => $config['default_entities_id'] ?? 0,
+                            'is_recursive' => $config['profile_is_recursive'] ?? 1
+                        ],
+                        [
+                            'users_id' => $glpiUserId,
+                            'is_dynamic' => 1
+                        ]
+                    );
+
+                    error_log("EntraSync::updateGlpiUser() - Updated profile for user {$glpiUserId} from {$currentProfile['profiles_id']} to {$config['default_profiles_id']}");
+                    $changed = true;
+                }
+            } else {
+                // User has no dynamic profile - add one
+                $profileUser = new \Profile_User();
+                $profileUser->add([
+                    'users_id' => $glpiUserId,
+                    'profiles_id' => $config['default_profiles_id'],
+                    'entities_id' => $config['default_entities_id'] ?? 0,
+                    'is_recursive' => $config['profile_is_recursive'] ?? 1,
+                    'is_dynamic' => 1
+                ]);
+
+                error_log("EntraSync::updateGlpiUser() - Added missing profile {$config['default_profiles_id']} to user {$glpiUserId}");
+                $changed = true;
+            }
+        }
 
         // Update realname (surname)
         $newRealname = $entraUser['surname'] ?? '';

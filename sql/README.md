@@ -140,6 +140,57 @@ mysql -u username -p database_name < sql/migration-1.4.0.sql
 
 ---
 
+### `migration-1.4.1.sql`
+**Purpose:** Migration script from version 1.4.0 to 1.4.1
+
+**Updates:**
+- **Profile assignments** for existing synchronized users
+- Ensures all dynamically-assigned profiles (`is_dynamic = 1`) match current plugin configuration
+- Only affects users synced from Entra ID (present in `glpi_plugin_entrahierarchy_usermaps`)
+
+**When to use:**
+- Upgrading from 1.4.0 to 1.4.1
+- Fixing profile assignment for users synced before configuration change
+- Ensuring all synced users have the correct default profile (e.g., Alanata)
+
+**How to run:**
+```bash
+# Docker environment
+docker exec -i glpi-mysql mysql -u glpi_user -pglpi_pass glpi < sql/migration-1.4.1.sql
+
+# Standard MySQL
+mysql -u username -p database_name < sql/migration-1.4.1.sql
+```
+
+**What it does:**
+```sql
+-- Updates dynamic profiles for synced users to match current configuration
+UPDATE glpi_profiles_users pu
+INNER JOIN glpi_plugin_entrahierarchy_usermaps um ON pu.users_id = um.users_id
+CROSS JOIN glpi_plugin_entrahierarchy_configs cfg
+SET pu.profiles_id = cfg.default_profiles_id,
+    pu.entities_id = cfg.default_entities_id,
+    pu.is_recursive = cfg.profile_is_recursive
+WHERE pu.is_dynamic = 1
+  AND (pu.profiles_id != cfg.default_profiles_id
+       OR pu.entities_id != cfg.default_entities_id);
+```
+
+**Bug fix in 1.4.1:**
+- **Profile update mechanism** - Fixed issue where existing users didn't receive updated default profile after configuration change
+- **Dynamic profile synchronization** - `updateGlpiUser()` now ensures all dynamic profiles match current plugin configuration
+- **Manual assignment protection** - Only updates dynamic profiles; manual assignments (`is_dynamic = 0`) are preserved
+
+**Example scenario:**
+1. Initial setup: `default_profiles_id = 1` (Self-Service)
+2. Synced 358 users → All got Self-Service profile ✅
+3. Configuration changed: `default_profiles_id = 9` (Alanata)
+4. Next sync:
+   - **Before 1.4.1**: Existing users keep Self-Service ❌
+   - **After 1.4.1**: All users updated to Alanata ✅
+
+---
+
 ## Installation Methods
 
 ### Method 1: Plugin Install (Recommended)
@@ -184,6 +235,7 @@ docker exec -i glpi-mysql mysql -u root -prootpassword glpi < sql/migration-1.1.
 | 1.1.0 | 2024-10-17 | migration-1.1.0.sql | Advanced filtering, deleted user handling |
 | 1.3.0 | 2025-01-20 | migration-1.3.0.sql | OAuth 2.0 SSO, CSRF protection |
 | 1.4.0 | 2025-01-21 | migration-1.4.0.sql | Automatic SSO redirect (never/cookie/always) |
+| 1.4.1 | 2025-01-22 | migration-1.4.1.sql | Profile assignment fix for existing users |
 
 ---
 

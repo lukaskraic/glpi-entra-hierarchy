@@ -5,6 +5,64 @@ All notable changes to the GLPI Entra Hierarchy Plugin will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2025-01-22
+
+### Fixed
+
+#### Profile Assignment for Existing Users
+- **Profile update mechanism** - Fixed issue where existing synchronized users didn't receive updated default profile after configuration change
+- **Dynamic profile synchronization** - `updateGlpiUser()` now ensures all dynamically-assigned profiles (`is_dynamic = 1`) match current plugin configuration
+- **Automatic profile migration** - Existing users with outdated profiles (e.g., Self-Service) are automatically updated to configured default profile (e.g., Alanata)
+- **Manual assignment protection** - Only updates dynamic profiles; manual profile assignments (`is_dynamic = 0`) are preserved
+
+### Changed
+- **EntraSync::updateGlpiUser()** - Enhanced to check and update profile/entity assignments for existing users
+- **Profile assignment logic** - Now applies default profile to both new AND existing users when configured
+- **Documentation updated** - Clarified in code comments that default settings apply to existing users with dynamic profiles
+
+### Technical
+
+#### Profile Update Logic Flow
+1. User sync runs via `updateGlpiUser()`
+2. Function retrieves current plugin configuration (`default_profiles_id`, `default_entities_id`)
+3. Checks user's current profile assignment (only dynamic profiles: `is_dynamic = 1`)
+4. If current profile doesn't match configuration → **Updates profile to match config**
+5. If user has no dynamic profile → **Adds configured default profile**
+6. Manual profile assignments (`is_dynamic = 0`) → **Preserved unchanged**
+
+#### Migration Script
+- **File**: `sql/migration-1.4.1.sql`
+- **Purpose**: One-time update of all synced users' dynamic profiles to match current configuration
+- **Safety**: Only affects users in `glpi_plugin_entrahierarchy_usermaps` with `is_dynamic = 1`
+- **SQL Logic**:
+  ```sql
+  UPDATE glpi_profiles_users pu
+  INNER JOIN glpi_plugin_entrahierarchy_usermaps um ON pu.users_id = um.users_id
+  CROSS JOIN glpi_plugin_entrahierarchy_configs cfg
+  SET pu.profiles_id = cfg.default_profiles_id,
+      pu.entities_id = cfg.default_entities_id,
+      pu.is_recursive = cfg.profile_is_recursive
+  WHERE pu.is_dynamic = 1
+    AND (pu.profiles_id != cfg.default_profiles_id
+         OR pu.entities_id != cfg.default_entities_id);
+  ```
+
+### Use Case Example
+**Scenario**: Administrator initially configured default profile as "Self-Service" (ID 1), synced 358 users, then changed configuration to "Alanata" (ID 9).
+
+**Before v1.4.1**:
+- New users → Get Alanata profile ✅
+- Existing 358 users → Keep Self-Service profile ❌
+
+**After v1.4.1**:
+- New users → Get Alanata profile ✅
+- Existing 358 users → Automatically updated to Alanata profile ✅
+- Next sync run → All users have correct profile
+
+**Migration**:
+- Run `migration-1.4.1.sql` to immediately update all existing users
+- OR wait for next scheduled sync to auto-update profiles
+
 ## [1.4.0] - 2025-01-21
 
 ### Added

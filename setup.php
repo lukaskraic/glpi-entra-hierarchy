@@ -29,7 +29,7 @@ use GlpiPlugin\EntraHierarchy\EntraSync;
 use GlpiPlugin\EntraHierarchy\EntraAuth;
 use Glpi\Http\Firewall;
 
-define('PLUGIN_ENTRAHIERARCHY_VERSION', '1.4.0');
+define('PLUGIN_ENTRAHIERARCHY_VERSION', '1.4.1');
 
 /**
  * Initialize the plugin
