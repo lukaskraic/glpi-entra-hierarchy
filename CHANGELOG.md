@@ -47,22 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
          OR pu.entities_id != cfg.default_entities_id);
   ```
 
-### Use Case Example
-**Scenario**: Administrator initially configured default profile as "Self-Service" (ID 1), synced 358 users, then changed configuration to "Alanata" (ID 9).
-
-**Before v1.4.1**:
-- New users → Get Alanata profile ✅
-- Existing 358 users → Keep Self-Service profile ❌
-
-**After v1.4.1**:
-- New users → Get Alanata profile ✅
-- Existing 358 users → Automatically updated to Alanata profile ✅
-- Next sync run → All users have correct profile
-
-**Migration**:
-- Run `migration-1.4.1.sql` to immediately update all existing users
-- OR wait for next scheduled sync to auto-update profiles
-
 ## [1.4.0] - 2025-01-21
 
 ### Added
