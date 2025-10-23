@@ -246,6 +246,44 @@ The plugin detects users that have been deleted or removed from Entra ID by comp
 
 **Safety:** Only users with Entra ID mapping are affected. Local GLPI users without mapping are never touched.
 
+## Scheduler Configuration
+
+The plugin uses GLPI's automatic actions (cron tasks) system for scheduled synchronization.
+
+### Automatic Execution (Recommended)
+
+For automatic execution, you need to configure your system cron to call GLPI's scheduler:
+
+```bash
+# Edit crontab
+crontab -e
+
+# Add this line to run GLPI's automatic actions every minute
+* * * * * /usr/bin/php /var/www/html/glpi/front/cron.php &>/dev/null
+```
+
+**Important:** The cron should run every minute to ensure automatic actions execute on schedule.
+
+### Task Configuration
+
+1. Go to **Setup → Automatic actions**
+2. Find **SyncEntraHierarchy** task
+3. Configure:
+   - **State**: Enable the task
+   - **Run period**: 30 minutes (default) or custom interval
+   - **Run mode**: Internal (GLPI's built-in scheduler) or CLI (system cron)
+   - **Execution time**: Set hourmin/hourmax to limit when sync runs (respects plugin config)
+   - **Logs lifetime**: Automatically clean old logs after 30 days
+
+### Execution Modes
+
+The plugin supports both execution modes:
+
+- **Internal Mode** (MODE_INTERNAL): Executed by GLPI's built-in scheduler when you access the web interface
+- **CLI Mode** (MODE_EXTERNAL): Executed by system cron calling `/front/cron.php`
+
+For production environments, **CLI Mode with system cron** is recommended for reliable execution.
+
 ## Manual Synchronization
 
 ### Via Web UI
@@ -257,6 +295,10 @@ The plugin detects users that have been deleted or removed from Entra ID by comp
 ### Via Command Line
 
 ```bash
+# Standard command
+php /var/www/html/glpi/front/cron.php --force 'GlpiPlugin\EntraHierarchy\EntraSync-SyncEntraHierarchy'
+
+# Docker environment
 docker exec -u www-data glpi-app php /var/www/html/glpi/front/cron.php --force 'GlpiPlugin\EntraHierarchy\EntraSync-SyncEntraHierarchy'
 ```
 

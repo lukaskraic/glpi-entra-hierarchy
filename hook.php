@@ -223,9 +223,13 @@ function plugin_glpientrahierarchy_install()
         'SyncEntraHierarchy',
         30 * MINUTE_TIMESTAMP,  // Run every 30 minutes by default
         [
-            'comment' => __('Synchronize organizational hierarchy from Microsoft Entra ID', 'glpientrahierarchy'),
-            'state'   => CronTask::STATE_WAITING,
-            'mode'    => CronTask::MODE_INTERNAL
+            'comment'        => __('Synchronize organizational hierarchy from Microsoft Entra ID', 'glpientrahierarchy'),
+            'state'          => CronTask::STATE_WAITING,
+            'allowmode'      => CronTask::MODE_INTERNAL | CronTask::MODE_EXTERNAL,  // Allow both CLI and internal execution
+            'hourmin'        => 0,
+            'hourmax'        => 24,
+            'logs_lifetime'  => 30,  // Keep logs for 30 days
+            'param'          => 0
         ]
     );
 

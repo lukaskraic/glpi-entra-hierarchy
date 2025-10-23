@@ -646,10 +646,10 @@ class EntraSync extends CommonDBTM
     }
 
     /**
-     * Get cron info
+     * Get cron info - provides task description and parameters for GLPI scheduler
      *
-     * @param string $name
-     * @return array
+     * @param string $name Task name
+     * @return array Task description and parameter information
      */
     public static function cronInfo($name)
     {
@@ -657,7 +657,13 @@ class EntraSync extends CommonDBTM
             case 'SyncEntraHierarchy':
                 return [
                     'description' => __('Synchronize organizational hierarchy from Microsoft Entra ID', 'glpientrahierarchy'),
-                    'parameter'   => __('Runs every 30 minutes by default', 'glpientrahierarchy')
+                    'parameter'   => __(
+                        'Synchronizes users and organizational hierarchy from Entra ID. ' .
+                        'Runs every 30 minutes by default. ' .
+                        'Respects sync window configuration (hourmin/hourmax). ' .
+                        'Can be run manually from plugin configuration page.',
+                        'glpientrahierarchy'
+                    )
                 ];
         }
         return [];
