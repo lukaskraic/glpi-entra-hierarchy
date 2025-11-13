@@ -66,6 +66,12 @@ function plugin_glpientrahierarchy_install()
             `automap_office_to_location` tinyint NOT NULL DEFAULT '0',
             `sync_hourmin` int NOT NULL DEFAULT '0',
             `sync_hourmax` int NOT NULL DEFAULT '24',
+            `oauth_enabled` tinyint NOT NULL DEFAULT '0',
+            `oauth_client_id` varchar(255) DEFAULT NULL,
+            `oauth_client_secret` varchar(255) DEFAULT NULL,
+            `oauth_tenant_id` varchar(255) DEFAULT NULL,
+            `oauth_redirect_uri` varchar(500) DEFAULT NULL,
+            `oauth_auto_redirect` varchar(20) NOT NULL DEFAULT 'never',
             `date_creation` datetime DEFAULT NULL,
             `date_mod` datetime DEFAULT NULL,
             PRIMARY KEY (`id`)

@@ -5,6 +5,63 @@ All notable changes to the GLPI Entra Hierarchy Plugin will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2025-11-13
+
+### Fixed
+
+#### Schema Consistency Bug (Critical)
+- **CREATE TABLE statement** - Added missing OAuth columns to fresh installation schema
+- **Fresh installations** now include all OAuth fields in initial table creation:
+  - `oauth_enabled` - Enable/disable OAuth SSO
+  - `oauth_client_id` - Microsoft Entra ID application client ID
+  - `oauth_client_secret` - Microsoft Entra ID application client secret
+  - `oauth_tenant_id` - Microsoft Entra ID tenant ID
+  - `oauth_redirect_uri` - OAuth callback URL
+  - `oauth_auto_redirect` - Auto-redirect mode (never/cookie/always)
+
+### Technical
+
+**Bug Description:**
+The `hook.php` CREATE TABLE statement was missing OAuth columns that were added in v1.3.0 (5 columns) and v1.4.0 (1 column). While the migration logic (ALTER TABLE) handled upgrades correctly, fresh installations created incomplete table schema, causing MySQL error 1054 when saving configuration.
+
+**Root Cause:**
+- OAuth fields were added via migrations in v1.3.0 and v1.4.0
+- CREATE TABLE statement in `plugin_glpientrahierarchy_install()` was not updated to reflect these migrations
+- This resulted in schema drift between fresh installations and upgraded installations
+- **Impact:** Fresh installs from v1.4.0+ would fail with "Unknown column 'oauth_enabled'" error
+
+**Solution:**
+- Updated CREATE TABLE statement in `hook.php` (lines 69-74) to include all 6 OAuth columns
+- Ensures schema consistency regardless of installation method (fresh install vs. upgrade)
+- No migration script needed (existing migration logic handles upgrades from older versions)
+
+### Migration Notes
+
+**For fresh installations (v1.4.2+):**
+- ✅ All OAuth fields created automatically during installation
+- ✅ No manual intervention required
+- ✅ Plugin configuration works immediately
+
+**For existing installations (upgrading to v1.4.2):**
+- ✅ **No database changes required** - OAuth columns already exist from previous migrations
+- ✅ **No migration script needed** - This fix only affects fresh installations
+- ✅ Update plugin via GLPI Marketplace or `git pull`
+- ✅ No downtime or data loss risk
+
+**For users experiencing MySQL error 1054:**
+If you installed v1.4.0 or v1.4.1 and are seeing "Unknown column 'oauth_enabled'" errors, you have two options:
+1. **Recommended:** Upgrade to v1.4.2 and reinstall plugin (will recreate tables with correct schema)
+2. **Hotfix:** Run `sql/hotfix-1.4.2.sql` to add missing columns manually
+
+### Compatibility
+- Fully backward compatible with GLPI 11.0+
+- No breaking changes
+- No functional changes
+- Pure schema consistency fix
+- All existing OAuth SSO functionality preserved
+
+---
+
 ## [1.4.1] - 2025-01-22
 
 ### Fixed
