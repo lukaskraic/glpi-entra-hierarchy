@@ -31,8 +31,9 @@ Automatic synchronization of organizational hierarchy (manager-subordinate relat
 
 ```bash
 cd /var/www/html/glpi/plugins
-git clone https://github.com/yourorg/glpientrahierarchy.git
-# OR manually copy the plugin directory
+git clone https://github.com/lukaskraic/glpi-entra-hierarchy.git glpientrahierarchy
+# ⚠️ Important: Specify target folder name 'glpientrahierarchy' (no hyphens)
+# OR manually download and extract to plugins/glpientrahierarchy/
 ```
 
 ### 2. Set Permissions
@@ -449,9 +450,10 @@ Entra Hierarchy Development Team
 
 ## Version
 
-1.4.0 - Added Automatic SSO Redirect (configurable never/cookie/always modes)
+1.4.2 - Critical Bug Fix: OAuth Columns Missing in Fresh Installation
 
 ### Changelog
+- **v1.4.2** (2025-11-13) - Critical bug fix: Added missing OAuth columns in fresh installation schema
 - **v1.4.0** (2025-01-21) - Automatic SSO redirect, cookie-based preference, emergency admin access
 - **v1.3.0** (2025-01-20) - OAuth 2.0 SSO, CSRF protection, automatic user provisioning on login
 - **v1.1.0** (2024-10-17) - Advanced filtering and deleted user handling
