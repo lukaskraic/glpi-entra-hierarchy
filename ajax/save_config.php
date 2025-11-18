@@ -5,6 +5,10 @@ include ('../../../inc/includes.php');
 header('Content-Type: application/json');
 
 try {
+    // Validate CSRF token
+    Session::checkCSRF($_POST);
+
+    // Check user permissions
     Session::checkRight('config', UPDATE);
 } catch (Exception $e) {
     echo json_encode([

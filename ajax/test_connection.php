@@ -4,7 +4,19 @@ include ('../../../inc/includes.php');
 
 header('Content-Type: application/json');
 
-Session::checkRight('config', UPDATE);
+try {
+    // Validate CSRF token
+    Session::checkCSRF($_POST);
+
+    // Check user permissions
+    Session::checkRight('config', UPDATE);
+} catch (Exception $e) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Access denied: ' . $e->getMessage()
+    ]);
+    exit;
+}
 
 // Manually include plugin classes
 include_once(GLPI_ROOT . '/plugins/glpientrahierarchy/src/GraphApiClient.php');

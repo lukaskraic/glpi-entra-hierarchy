@@ -116,7 +116,15 @@ function saveConfig() {
         body: formData,
         credentials: 'same-origin'
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('HTTP error:', response.status, text);
+                throw new Error(`HTTP ${response.status}: ${text.substring(0, 200)}`);
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             displayAjaxMessageAfterRedirect();
@@ -135,10 +143,10 @@ function saveConfig() {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Save config error:', error);
         glpi_alert({
             title: '<?php echo __('Error'); ?>',
-            message: 'An error occurred while saving configuration',
+            message: error.message || 'An error occurred while saving configuration',
             type: 'error'
         });
     });
@@ -174,7 +182,15 @@ function testConnection() {
         body: formData,
         credentials: 'same-origin'
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('HTTP error:', response.status, text);
+                throw new Error(`HTTP ${response.status}: ${text.substring(0, 200)}`);
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         glpi_alert({
             title: data.success ? '<?php echo __('Success'); ?>' : '<?php echo __('Error'); ?>',
@@ -183,10 +199,10 @@ function testConnection() {
         });
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Test connection error:', error);
         glpi_alert({
             title: '<?php echo __('Error'); ?>',
-            message: 'An error occurred while testing connection',
+            message: error.message || 'An error occurred while testing connection',
             type: 'error'
         });
     });
