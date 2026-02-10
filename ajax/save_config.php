@@ -5,10 +5,8 @@ include ('../../../inc/includes.php');
 header('Content-Type: application/json');
 
 try {
-    // Validate CSRF token
-    Session::checkCSRF($_POST);
-
-    // Check user permissions
+    // CSRF is validated by GLPI 11 framework (CheckCsrfListener) before this script runs.
+    // Manual Session::checkCSRF() here would fail because the token is already consumed.
     Session::checkRight('config', UPDATE);
 } catch (Exception $e) {
     echo json_encode([
