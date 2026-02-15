@@ -29,7 +29,7 @@ use GlpiPlugin\EntraHierarchy\EntraSync;
 use GlpiPlugin\EntraHierarchy\EntraAuth;
 use Glpi\Http\Firewall;
 
-define('PLUGIN_ENTRAHIERARCHY_VERSION', '1.4.4');
+define('PLUGIN_ENTRAHIERARCHY_VERSION', '1.4.6');
 
 /**
  * Initialize the plugin
@@ -52,6 +52,11 @@ function plugin_init_glpientrahierarchy()
             'glpientrahierarchy',
             '#^/front/oauth_callback\.php#',
             Firewall::STRATEGY_NO_CHECK
+        );
+        Firewall::addPluginStrategyForLegacyScripts(
+            'glpientrahierarchy',
+            '#^/ajax/.*\.php#',
+            Firewall::STRATEGY_AUTHENTICATED
         );
     }
 

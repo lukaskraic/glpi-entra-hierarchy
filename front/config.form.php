@@ -104,15 +104,21 @@ $languages = [
 ?>
 
 <script>
+function getCSRFToken() {
+    const meta = document.querySelector('meta[property="glpi:csrf_token"]');
+    return meta ? meta.content : '';
+}
+
 function saveConfig() {
     const form = document.getElementById('config_form');
     const formData = new FormData(form);
 
-    // Add CSRF token for GLPI 11
-    formData.append('_glpi_csrf_token', '<?php echo Session::getNewCSRFToken(); ?>');
-
     fetch('/plugins/glpientrahierarchy/ajax/save_config.php', {
         method: 'POST',
+        headers: {
+            'X-Glpi-Csrf-Token': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData,
         credentials: 'same-origin'
     })
@@ -174,11 +180,12 @@ function testConnection() {
     formData.append('tenant_id', tenantId);
     formData.append('test_connection', '1');
 
-    // Add CSRF token for GLPI 11
-    formData.append('_glpi_csrf_token', '<?php echo Session::getNewCSRFToken(); ?>');
-
     fetch('/plugins/glpientrahierarchy/ajax/test_connection.php', {
         method: 'POST',
+        headers: {
+            'X-Glpi-Csrf-Token': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData,
         credentials: 'same-origin'
     })
@@ -221,10 +228,13 @@ function manualSync() {
 
     const formData = new FormData();
     formData.append('manual_sync', '1');
-    formData.append('_glpi_csrf_token', '<?php echo Session::getNewCSRFToken(); ?>');
 
     fetch('/plugins/glpientrahierarchy/ajax/manual_sync.php', {
         method: 'POST',
+        headers: {
+            'X-Glpi-Csrf-Token': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData,
         credentials: 'same-origin'
     })

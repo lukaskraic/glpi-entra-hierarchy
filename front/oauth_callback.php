@@ -87,28 +87,34 @@ $receivedState = $_GET['state'];
 error_log("oauth_callback.php - Authorization code received: " . substr($authorizationCode, 0, 10) . "...");
 error_log("oauth_callback.php - State received: " . substr($receivedState, 0, 8) . "...");
 
-// Validate state parameter (CSRF protection)
-if (!isset($_SESSION['oauth_state']) || $_SESSION['oauth_state'] !== $receivedState) {
-    error_log("oauth_callback.php - State mismatch! Possible CSRF attack.");
-    error_log("oauth_callback.php - Expected: " . ($_SESSION['oauth_state'] ?? 'NOT SET'));
-    error_log("oauth_callback.php - Received: " . $receivedState);
+// Read all needed OAuth data from session before closing it
+$storedState = $_SESSION['oauth_state'] ?? null;
+$codeVerifier = $_SESSION['oauth_code_verifier'] ?? null;
 
-    EntraAuth::clearOAuthSession();
+// Destroy the raw PHP session completely.
+// This is critical: the raw session must be destroyed before Session::init()
+// creates a GLPI session with its own cookie name. Without this, PHP can't
+// switch session names and GLPI session data ends up under the wrong cookie,
+// causing a login redirect loop.
+session_destroy();
+
+// Validate state parameter (CSRF protection)
+if (!$storedState || $storedState !== $receivedState) {
+    error_log("oauth_callback.php - State mismatch! Possible CSRF attack.");
+    error_log("oauth_callback.php - Expected: " . ($storedState ?? 'NOT SET'));
+    error_log("oauth_callback.php - Received: " . $receivedState);
 
     Session::addMessageAfterRedirect(__('Security validation failed. Please try again.', 'glpientrahierarchy'), false, ERROR);
     Html::redirect($CFG_GLPI['root_doc'] . '/');
 }
 
-// Get code_verifier from session
-if (!isset($_SESSION['oauth_code_verifier'])) {
+// Validate code_verifier was present in session
+if (!$codeVerifier) {
     error_log("oauth_callback.php - Code verifier not found in session");
-    EntraAuth::clearOAuthSession();
 
     Session::addMessageAfterRedirect(__('Session expired. Please try again.', 'glpientrahierarchy'), false, ERROR);
     Html::redirect($CFG_GLPI['root_doc'] . '/');
 }
-
-$codeVerifier = $_SESSION['oauth_code_verifier'];
 
 // Exchange authorization code for tokens
 error_log("oauth_callback.php - Exchanging authorization code for tokens");
@@ -116,7 +122,6 @@ $tokens = EntraAuth::exchangeCodeForTokens($config, $authorizationCode, $codeVer
 
 if (!$tokens) {
     error_log("oauth_callback.php - Failed to exchange code for tokens");
-    EntraAuth::clearOAuthSession();
 
     Session::addMessageAfterRedirect(__('Failed to obtain authentication tokens. Please contact your administrator.', 'glpientrahierarchy'), false, ERROR);
     Html::redirect($CFG_GLPI['root_doc'] . '/');
@@ -130,7 +135,6 @@ $idTokenPayload = EntraAuth::validateIdToken($tokens['id_token'], $config);
 
 if (!$idTokenPayload) {
     error_log("oauth_callback.php - ID token validation failed");
-    EntraAuth::clearOAuthSession();
 
     Session::addMessageAfterRedirect(__('Authentication token validation failed. Please contact your administrator.', 'glpientrahierarchy'), false, ERROR);
     Html::redirect($CFG_GLPI['root_doc'] . '/');
@@ -150,7 +154,6 @@ if (isset($idTokenPayload->email)) {
 
 if (!$email) {
     error_log("oauth_callback.php - No email found in ID token");
-    EntraAuth::clearOAuthSession();
 
     Session::addMessageAfterRedirect(__('Could not retrieve email address from authentication token.', 'glpientrahierarchy'), false, ERROR);
     Html::redirect($CFG_GLPI['root_doc'] . '/');
@@ -175,7 +178,6 @@ $userId = EntraAuth::findGlpiUser($email);
 
 if (!$userId) {
     error_log("oauth_callback.php - User not found in GLPI database: {$email}");
-    EntraAuth::clearOAuthSession();
 
     Session::addMessageAfterRedirect(
         __('User not found in GLPI. Please ensure your account has been synchronized from Entra ID.', 'glpientrahierarchy'),
@@ -193,16 +195,12 @@ $sessionCreated = EntraAuth::createGlpiSession($userId);
 
 if (!$sessionCreated) {
     error_log("oauth_callback.php - Failed to create GLPI session");
-    EntraAuth::clearOAuthSession();
 
     Session::addMessageAfterRedirect(__('Failed to create session. Please contact your administrator.', 'glpientrahierarchy'), false, ERROR);
     Html::redirect($CFG_GLPI['root_doc'] . '/');
 }
 
 error_log("oauth_callback.php - GLPI session created successfully");
-
-// Clear OAuth session data
-EntraAuth::clearOAuthSession();
 
 // Log successful authentication
 error_log("oauth_callback.php - OAuth authentication successful for user: {$email} (ID: {$userId})");
