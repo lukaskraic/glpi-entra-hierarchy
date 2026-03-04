@@ -40,12 +40,13 @@ global $CFG_GLPI;
 require_once(Plugin::getPhpDir('glpientrahierarchy') . '/src/EntraConfig.php');
 require_once(Plugin::getPhpDir('glpientrahierarchy') . '/src/EntraAuth.php');
 
-// Ensure session is started
+// Ensure session is started (GLPI 11 kernel normally starts it, this is a fallback)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
 error_log("oauth_callback.php - OAuth callback received");
+error_log("oauth_callback.php - Session name: " . session_name() . ", ID: " . substr(session_id(), 0, 12) . "...");
 
 // Load OAuth configuration
 $config = EntraConfig::getConfig();
@@ -87,16 +88,18 @@ $receivedState = $_GET['state'];
 error_log("oauth_callback.php - Authorization code received: " . substr($authorizationCode, 0, 10) . "...");
 error_log("oauth_callback.php - State received: " . substr($receivedState, 0, 8) . "...");
 
-// Read all needed OAuth data from session before closing it
+// Read OAuth data from session
+// In GLPI 11, the kernel starts the session with glpi_xxx cookie name before this script runs.
+// oauth_login.php stores state/verifier under the same session, so they are available here.
 $storedState = $_SESSION['oauth_state'] ?? null;
 $codeVerifier = $_SESSION['oauth_code_verifier'] ?? null;
 
-// Destroy the raw PHP session completely.
-// This is critical: the raw session must be destroyed before Session::init()
-// creates a GLPI session with its own cookie name. Without this, PHP can't
-// switch session names and GLPI session data ends up under the wrong cookie,
-// causing a login redirect loop.
-session_destroy();
+error_log("oauth_callback.php - Stored state: " . ($storedState ? substr($storedState, 0, 8) . "..." : "NOT SET"));
+error_log("oauth_callback.php - Code verifier: " . ($codeVerifier ? "present (" . strlen($codeVerifier) . " chars)" : "NOT SET"));
+
+// Clean up OAuth data from session (no longer needed)
+unset($_SESSION['oauth_state']);
+unset($_SESSION['oauth_code_verifier']);
 
 // Validate state parameter (CSRF protection)
 if (!$storedState || $storedState !== $receivedState) {
@@ -161,17 +164,6 @@ if (!$email) {
 
 error_log("oauth_callback.php - User email from token: {$email}");
 
-// Optional: Get additional user info from Graph API
-// This is redundant if ID token contains all needed info
-// Uncomment if you need additional profile data
-/*
-error_log("oauth_callback.php - Fetching user info from Graph API");
-$userInfo = EntraAuth::getUserInfo($tokens['access_token']);
-if ($userInfo) {
-    error_log("oauth_callback.php - Additional user info retrieved");
-}
-*/
-
 // Find GLPI user by email
 error_log("oauth_callback.php - Looking up GLPI user");
 $userId = EntraAuth::findGlpiUser($email);
@@ -190,6 +182,8 @@ if (!$userId) {
 error_log("oauth_callback.php - GLPI user found: ID {$userId}");
 
 // Create GLPI session
+// Session::init() handles everything: destroys old session data, regenerates ID,
+// populates $_SESSION with user data, loads profiles and entities.
 error_log("oauth_callback.php - Creating GLPI session");
 $sessionCreated = EntraAuth::createGlpiSession($userId);
 
@@ -201,6 +195,10 @@ if (!$sessionCreated) {
 }
 
 error_log("oauth_callback.php - GLPI session created successfully");
+error_log("oauth_callback.php - Session name: " . session_name() . ", new ID: " . substr(session_id(), 0, 12) . "...");
+error_log("oauth_callback.php - glpiID=" . ($_SESSION['glpiID'] ?? 'NOT SET') . ", glpiname=" . ($_SESSION['glpiname'] ?? 'NOT SET'));
+error_log("oauth_callback.php - valid_id matches: " . (($_SESSION['valid_id'] ?? '') === session_id() ? 'YES' : 'NO'));
+error_log("oauth_callback.php - glpiactiveprofile=" . (isset($_SESSION['glpiactiveprofile']['id']) ? $_SESSION['glpiactiveprofile']['id'] : 'NOT SET'));
 
 // Log successful authentication
 error_log("oauth_callback.php - OAuth authentication successful for user: {$email} (ID: {$userId})");

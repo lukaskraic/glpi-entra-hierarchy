@@ -422,18 +422,24 @@ class EntraAuth
         $user = $userResult->current();
 
         // Use GLPI's Auth class to create proper session
-        // This handles all profile/entity loading automatically
+        // Session::init() handles: destroy old session, regenerate ID,
+        // populate $_SESSION, load profiles and entities.
         $auth = new \Auth();
 
-        // Set authentication to external OAuth
         $auth->auth_succeded = true;
+        $auth->extauth = 1;
         $auth->user = new \User();
         $auth->user->getFromDB($userId);
 
-        // Create GLPI session properly
         Session::init($auth);
 
-        error_log("EntraAuth::createGlpiSession() - Session created successfully for: {$user['name']}");
+        // Session::init() may set auth_succeded to false if user has no profile/interface
+        if (!$auth->auth_succeded) {
+            error_log("EntraAuth::createGlpiSession() - Session::init() rejected auth for: {$user['name']}");
+            return false;
+        }
+
+        error_log("EntraAuth::createGlpiSession() - Session created for: {$user['name']}, glpiID=" . ($_SESSION['glpiID'] ?? 'NOT SET'));
 
         return true;
     }

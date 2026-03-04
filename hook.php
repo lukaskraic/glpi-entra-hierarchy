@@ -287,8 +287,30 @@ function plugin_glpientrahierarchy_display_login()
     $oauthLoginUrl = Plugin::getWebDir('glpientrahierarchy') . '/front/oauth_login.php';
     $autoRedirect = $config['oauth_auto_redirect'] ?? 'never';
 
-    // Add CSS for Microsoft button styling
-    echo '<link rel="stylesheet" href="' . Plugin::getWebDir('glpientrahierarchy') . '/css/login.css">';
+    // Inline CSS - external CSS file returns 404 on GLPI 11 login page (unauthenticated)
+    echo '<style>
+    .microsoft-login-container { margin: 0 0 16px 0; text-align: center; width: 100%; }
+    .microsoft-sso-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 12px 24px; font-size: 15px; font-weight: 600;
+        color: #fff; background: #2b2b2b; border: 2px solid #2b2b2b; border-radius: 6px;
+        cursor: pointer; text-decoration: none; width: 100%;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        transition: all 0.2s ease;
+    }
+    .microsoft-sso-btn:hover { background: #1a1a1a; color: #fff; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.18); text-decoration: none; }
+    .microsoft-sso-btn:active { transform: translateY(0); }
+    .microsoft-sso-btn svg { margin-right: 12px; width: 21px; height: 21px; flex-shrink: 0; }
+    .microsoft-login-separator {
+        margin: 16px 0; display: flex; align-items: center; color: #6c757d;
+        font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .microsoft-login-separator::before, .microsoft-login-separator::after {
+        content: ""; flex: 1; height: 1px; background: #dee2e6;
+    }
+    .microsoft-login-separator span { padding: 0 16px; }
+    </style>';
 
     // Add auto-redirect JavaScript if enabled
     if ($autoRedirect !== 'never') {
@@ -333,6 +355,9 @@ function plugin_glpientrahierarchy_display_login()
     }
 
     // Add Microsoft SSO button HTML
+    // GLPI 11 renders the display_login hook in a narrow side column (col-auto).
+    // We use JavaScript to move the button above the login form for better visibility.
+    echo '<div id="microsoft-sso-wrapper">';
     echo '<div class="microsoft-login-container">';
     echo '    <a href="' . $oauthLoginUrl . '" class="microsoft-sso-btn" onclick="document.cookie=\'glpi_entra_sso_preferred=1; path=/; max-age=31536000; SameSite=Lax\';">';
     echo '        <svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">';
@@ -345,4 +370,16 @@ function plugin_glpientrahierarchy_display_login()
     echo '    </a>';
     echo '</div>';
     echo '<div class="microsoft-login-separator"><span>or</span></div>';
+    echo '</div>';
+    echo '<script>
+    (function() {
+        var wrapper = document.getElementById("microsoft-sso-wrapper");
+        if (!wrapper) return;
+        var formCol = document.querySelector(".row.justify-content-center > .col-md-5");
+        if (formCol) {
+            formCol.insertBefore(wrapper, formCol.firstChild);
+            wrapper.parentElement.closest(".col-auto")?.remove();
+        }
+    })();
+    </script>';
 }
