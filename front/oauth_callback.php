@@ -203,6 +203,18 @@ error_log("oauth_callback.php - glpiactiveprofile=" . (isset($_SESSION['glpiacti
 // Log successful authentication
 error_log("oauth_callback.php - OAuth authentication successful for user: {$email} (ID: {$userId})");
 
-// Redirect to GLPI home page
+// Add success message and flush session to disk BEFORE redirect.
+// Session::init() calls session_regenerate_id() which creates a new session ID.
+// The session data must be written to disk before the browser follows the redirect,
+// otherwise the next request finds an empty session file and the user appears logged out.
 Session::addMessageAfterRedirect(__('You have been successfully authenticated.', 'glpientrahierarchy'), false, INFO);
-Html::redirect($CFG_GLPI['root_doc'] . '/');
+session_write_close();
+
+error_log("oauth_callback.php - Session written and closed, redirecting to home page");
+
+// Use header() + exit instead of Html::redirect() to ensure clean redirect
+// after session_write_close(). Html::redirect() throws RedirectException which
+// could interfere with the already-closed session.
+$redirectUrl = $CFG_GLPI['root_doc'] . '/';
+header("Location: {$redirectUrl}");
+exit;
